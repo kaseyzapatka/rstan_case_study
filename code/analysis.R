@@ -1,13 +1,50 @@
-library(cmdstanr)
+# ==========================================================================
+# Analysis
+
+# Summary: This script ...
+# ==========================================================================
 
 
-load_in_channel_data <- function(){
-  # Insert your code here
-  return(NA)  
+# ==========================================================================
+# PACKAGES & OPTIONS
+# ==========================================================================
+# clear all
+remove(list = ls())
+
+# set terminal width options and increase Java memory in R 
+options(
+  java.parameters = paste0("-Xmx200g"), # Increase Java memory
+  scipen = 999, # avoid scientific notation
+  width=Sys.getenv("COLUMNS") # set width to terminal window
+)
+ 
+#
+# Load libraries
+# --------------------------------------------------------------------------
+# Loading required packages and setting defaults
+librarian::shelf(
+  cmdstanr, tidyverse, tidybayes, posterior, bayesplot, timathomas/colorout,
+)
+
+# ==========================================================================
+# DATA
+# ==========================================================================
+
+# data path
+data_path <- "/Users/Dora/git/projects/rstan_case_study/data/" 
+data_path
+
+# function to load data
+load_in_channel_data <- function(data_path){
+  data <- read_rds(paste0(data_path, "channel-spend.rds"))
+  return(data)
 }
 
 # Call your function below
-channels <- NA
+channels <- load_in_channel_data(data_path)
+
+# view data
+channels %>% glimpse()
 
 # Data passed to stan.
 # We recommend you only edit the priors and 
@@ -55,3 +92,34 @@ mod = cmdstan_model("simple-model.stan")
 
 # Sample the model
 fit = mod$sample(data = dat, parallel_chains = parallel::detectCores(), seed = 0)
+
+
+
+# 
+get_variables(fit)
+
+# Visualize
+bayesplot::ppc_dens_overlay(y = prior_draws, yrep = fit)
+
+prior_draws <- extract(fit, pars = "depvar")
+prior_draws
+
+
+dat_prior <- dat
+dat_prior$prior_only <- 1
+
+
+prior_fit <- mod$sample(
+  data = dat_prior,
+  parallel_chains = parallel::detectCores(),
+  seed = 0
+)
+
+
+library(posterior)
+
+# Replace "y_rep" with the correct generated quantity or parameter
+prior_draws <- posterior::as_draws_df(prior_fit$draws("depvar"))
+
+variables <- prior_fit$metadata()$model_vars
+print(variables)
