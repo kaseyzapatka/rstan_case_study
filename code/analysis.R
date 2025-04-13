@@ -11,6 +11,7 @@
 # clear all
 remove(list = ls())
 
+
 # set terminal width options and increase Java memory in R 
 options(
   java.parameters = paste0("-Xmx200g"), # Increase Java memory
@@ -335,9 +336,25 @@ posterior_draws_updated %>%
     geom_density(fill = "steelblue", alpha = 0.3) +
     labs(title = "Posterior Predictive Distribution", x = "Simulated depvar", y = "Density") +
     plot_theme +
-    scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
+    scale_x_continuous(
+      breaks = seq(0, max(posterior_draws_updated$predicted), by = 2.5),
+      labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")
+    ) +
     labs(
       title = "Observed Distribution of Daily Revenue",
       x = "Daily Revenue \n($ thousands of dollars)",
       y = "Density"
     )
+
+
+draws_array <- as_draws_array(fit$draws(variables = "kappa[7]"))
+
+mcmc_dens(draws_array, pars = "kappa[7]")
+mcmc_areas(draws_array, pars = "kappa[7]")
+
+variables(fit$draws())
+
+color_scheme_set("red")
+mcmc_intervals(draws_array, pars = c("mailers", "podcast", "influencers", "sigma"))
+
+draws_array
