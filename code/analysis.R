@@ -19,11 +19,38 @@ options(
 )
  
 #
+# Set ggplot themes 
+# --------------------------------------------------------------------------
+plot_theme <- 
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 14, face = "bold"),
+    axis.title.x = element_text(size = 14),  # Increase x-axis label size
+    axis.title.y = element_text(size = 14),   # Increase y-axis label size
+    axis.text.x = element_text(size = 14),   # Increase x-axis tick labels
+    axis.text.y = element_text(size = 14),    # Increase y-axis tick labels
+    plot.title.position = "plot",
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 16, face = "bold.italic", hjust = 0.05),
+    plot.caption = element_text(size = 12, hjust = 0),
+    plot.caption.position = "plot",
+    
+    # Custom panel border (only left and bottom)
+    panel.border = element_blank(),
+    axis.line.x = element_line(color = "black"),  # Bottom border
+    axis.line.y = element_line(color = "black")   # Left border
+  )
+
+
+#
 # Load libraries
 # --------------------------------------------------------------------------
 # Loading required packages and setting defaults
 librarian::shelf(
   cmdstanr, tidyverse, tidybayes, posterior, bayesplot, timathomas/colorout,
+  ggdark, patchwork
 )
 
 # ==========================================================================
@@ -34,6 +61,7 @@ librarian::shelf(
 data_path <- "/Users/Dora/git/projects/rstan_case_study/data/" 
 data_path
 
+# STEP 1 -------------------------------------------
 # function to load data
 load_in_channel_data <- function(data_path){
   data <- read_rds(paste0(data_path, "channel-spend.rds"))
@@ -85,7 +113,7 @@ dat = list(
 # Sample From Prior Predictive? -------------------------------------------
   ## 1 - Yes
   ## 0 - No (sample from posterior)
-  prior_only = 0
+  prior_only = 1
 )
 
 mod = cmdstan_model("simple-model.stan")
@@ -94,8 +122,91 @@ mod = cmdstan_model("simple-model.stan")
 fit = mod$sample(data = dat, parallel_chains = parallel::detectCores(), seed = 0)
 
 
+# ==========================================================================
+# DATA VISUALIZATIONS
+# ==========================================================================
 
-# STEP 1 -------------------------------------------
+# density plot
+channels %>% 
+  ggplot(aes(x = depvar)) + 
+  geom_density(fill = "steelblue", alpha = 0.5, color = NA) +
+  plot_theme +
+  #dark_theme_bw() +
+  scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
+  labs(
+    title = "Observed Distribution of Daily Revenue",
+    x = "Daily Revenue \n($ thousands of dollars)",
+    y = "Density"
+  ) 
+  
+
+# plot over time
+channels %>% 
+  mutate(day = row_number()) %>% 
+  ggplot(aes(x = day, y = depvar)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  geom_jitter() +
+  geom_smooth(se = TRUE, method = "loess", color = "maroon", linewidth = 1) +
+  labs(
+    title = "Predicted Values Over Time",
+    x = "Day",
+    y = "Predicted Value"
+  ) +
+  plot_theme
+  
+
+
+# Main plot with line + smoother + jittered points
+channels %>%
+  mutate(t = row_number()) %>%
+  ggplot(aes(x = t, y = depvar)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  geom_smooth(se = TRUE, method = "loess", color = "maroon", linewidth = 1) +
+  geom_point(
+    aes(x = t, y = depvar),
+    width = 5, height = 0,
+    alpha = 0.4, color = "black", size = 2
+  ) +
+  labs(
+    title = "Predicted Values Over Time with Random Sampled Observations",
+    x = "Day",
+    y = "Predicted Value"
+  ) +
+  plot_theme
+
+
+# 1. Density plot
+p1 <- channels %>% 
+  ggplot(aes(x = depvar)) + 
+  geom_density(fill = "steelblue", alpha = 0.5, color = NA) +
+  plot_theme +
+  scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
+  labs(
+    title = "Observed Distribution of Daily Revenue",
+    x = "Daily Revenue \n($ thousands of dollars)",
+    y = "Density"
+  )
+
+# 2. Time series plot
+p2 <- channels %>% 
+  mutate(day = row_number()) %>% 
+  ggplot(aes(x = day, y = depvar)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  geom_jitter(width = 5, alpha = 0.3, size = 1) +
+  geom_smooth(se = TRUE, method = "loess", color = "maroon", linewidth = 1) +
+  plot_theme +
+  labs(
+    title = "Predicted Values Over Time",
+    x = "Day",
+    y = "Predicted Value"
+  )
+
+# Combine using patchwork
+p1 / p2 + plot_layout(heights = c(1, 1.2))
+
+
+# STEP 2 -------------------------------------------
+# sample from the predictive prior
 dat_prior <- dat
 dat_prior$prior_only <- 0
 
