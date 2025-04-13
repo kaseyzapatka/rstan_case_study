@@ -1,7 +1,8 @@
 # ==========================================================================
 # Analysis
 
-# Summary: This script ...
+# Summary: Evaluate model fit based on prior and posterior fits. Update as 
+# needed.
 # ==========================================================================
 
 
@@ -25,10 +26,9 @@ options(
 # Loading required packages and setting defaults
 librarian::shelf(
   cmdstanr, tidyverse, tidybayes, posterior, bayesplot, timathomas/colorout,
-  ggdark, patchwork
+  ggdark, patchwork, here
 )
 
- 
 #
 # Set ggplot themes 
 # --------------------------------------------------------------------------
@@ -72,6 +72,7 @@ load_in_channel_data <- function(data_path){
 
 # Call your function below
 channels <- load_in_channel_data(data_path)
+  glimpse(channels)
 
 # ==========================================================================
 # DATA VISUALIZATIONS
@@ -82,11 +83,13 @@ p1 <-
   channels %>% 
   ggplot(aes(x = depvar)) + 
   geom_density(fill = "steelblue", alpha = 0.5) +
+  geom_vline(xintercept = 4.9, color = "red", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = 7.45, color = "red", linetype = "dashed", linewidth = 1) +
   plot_theme +
-  scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
+  scale_x_continuous(labels = scales::label_dollar(scale = 1, accuracy = 0.1, suffix = "k")) +
   labs(
     title = "Observed Distribution of Daily Revenue",
-    x = "Daily Revenue \n($ thousands of dollars)",
+    x = "Daily Revenue \n($ hundreds of thousands of dollars)",
     y = "Density"
   )
 
@@ -95,14 +98,16 @@ p2 <-
   channels %>% 
   mutate(day = row_number()) %>% 
   ggplot(aes(x = day, y = depvar)) +
-  geom_line(color = "steelblue", linewidth = 1) +
+  geom_line(color = "steelblue", linewidth = 1, alpha = 0.7,) +
   geom_jitter(width = 5, alpha = 0.3, size = 1) +
   geom_smooth(se = TRUE, method = "loess", color = "black", linewidth = 1) +
   plot_theme +
+    scale_y_continuous(labels = scales::label_dollar(scale = 1, accuracy = 0.1, suffix = "k")) +
+    scale_x_continuous(labels = scales::label_number()) +
   labs(
-    title = "Predicted Values Over Time",
+    title = "Observed Daily Revenue Over Time",
     x = "Day",
-    y = "Predicted Value"
+    y = "Daily Revenue \n($ hundreds of thousands of dollars)",
   )
 
 # Combine using patchwork
@@ -157,7 +162,7 @@ dat = list(
 # MODEL
 # ==========================================================================
 
-mod = cmdstan_model("code/simple-model.stan")
+mod = cmdstan_model(here("code/simple-model.stan"))
 
 # Sample the model
 fit = mod$sample(data = dat, parallel_chains = parallel::detectCores(), seed = 0)
@@ -167,12 +172,11 @@ fit = mod$sample(data = dat, parallel_chains = parallel::detectCores(), seed = 0
 # STEP 2: SAMPLE FROM THE PREDICTIVE PRIOR
 # ==========================================================================
 
-# STEP 2 -------------------------------------------
-# sample from the predictive prior
+# make sure switch samples from prior only
 dat_prior <- dat
 dat_prior$prior_only <- 1
 
-
+# sample from the predictive prior
 prior_fit <- mod$sample(
   data = dat_prior,
   parallel_chains = parallel::detectCores(),
@@ -188,56 +192,39 @@ prior_draws <-
 # All prior predictive values collapsed
 prior_draws %>% 
   ggplot(aes(x = predicted)) +
-    geom_density(fill = "steelblue", alpha = 0.3) +
+    geom_density(fill = "steelblue", alpha = 0.5) +
     labs(title = "Prior Predictive Distribution", x = "Simulated depvar", y = "Density") +
     plot_theme +
-    scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
+    scale_x_continuous(labels = scales::label_dollar(scale = 1, accuracy = 0.1, suffix = "k")) +
     labs(
-      title = "Observed Distribution of Daily Revenue",
-      x = "Daily Revenue \n($ thousands of dollars)",
+      title = "Prior Predictive Distribution of Daily Revenue",
+      x = "Daily Revenue \n($ hundreds of thousands of dollars)",
       y = "Density"
     )
 
 
 prior_draws %>% 
+  ungroup() %>% 
+  select(predicted) %>% 
   summary()
   
 channels %>% 
   as_tibble() %>% 
+  select(depvar) %>% 
   summary()
-
-
-# 10 randomly sampled days
-set.seed(193)  # optional, for reproducibility
-
-prior_draws %>%
-  ungroup()  %>% 
-  distinct(t) %>%              # get unique time periods
-  slice_sample(n = 12) %>%     # sample 10 time periods
-  pull(t) -> sampled_times     # extract sampled time periods
-
-
-prior_draws %>%
-  filter(t %in% sampled_times) %>% 
-  ggplot(aes(x = predicted)) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(~ t, scales = "free") +
-  labs(title = "Prior Predictive by Timestep")
-
 
 # ==========================================================================
 # STEP 3: SAMPLE FROM THE POSTERIOR
 # ==========================================================================
 
-# Diagnose -------------------------------------------
-# sample from the predictive prior
-
-# Diagnose -------------------------------------------
-# sample from the predictive posterior
+#
+# Sample from the predictive posterior
+# --------------------------------------------------------------------------
+# switch to sample from posterior
 dat_posterior <- dat
 dat_posterior$prior_only <- 0
 
-
+# sample 
 posterior_fit <- mod$sample(
   data = dat_posterior,
   parallel_chains = parallel::detectCores(),
@@ -253,7 +240,7 @@ posterior_draws <-
 # All posterior predictive values collapsed
 posterior_draws %>% 
   ggplot(aes(x = predicted)) +
-    geom_density(fill = "steelblue", alpha = 0.3) +
+    geom_density(fill = "steelblue", alpha = 0.5) +
     labs(title = "Posterior Predictive Distribution", x = "Simulated depvar", y = "Density") +
     plot_theme +
     scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
@@ -263,15 +250,22 @@ posterior_draws %>%
       y = "Density"
     )
 
+#
+# Diagnose
+# --------------------------------------------------------------------------
+fit_posterior = mod$sample(data = dat_posterior, parallel_chains = parallel::detectCores(), seed = 0)
+
+fit_posterior$cmdstan_diagnose()
 
 
+# ==========================================================================
+# STEP 4: UPDATE PRIORS
+# ==========================================================================
 
-# Diagnose -------------------------------------------
-fit$cmdstan_diagnose()
-
-# STEP 4 -------------------------------------------
-# Updated priors
-dat = list(
+#
+# Update Priors
+# --------------------------------------------------------------------------
+dat_updated = list(
 # Data --------------------------------------------------------------------
   channels = channels[, colnames(channels)!='depvar'],
   
@@ -311,13 +305,26 @@ dat = list(
 )
 
 
+#
+# Refit model with updated priors
+# --------------------------------------------------------------------------
+fit_updated = mod$sample(data = dat_updated, parallel_chains = parallel::detectCores(), seed = 0)
 
-# UPDATED POSTERIOR -------------------------------------------
-# sample from the predictive posterior
-dat_posterior_updated <- dat
+#
+# Diagnose
+# --------------------------------------------------------------------------
+fit_updated$cmdstan_diagnose()
+
+
+#
+# Sample from the updated  posterior
+# --------------------------------------------------------------------------
+
+# switch to sample from posterior
+dat_posterior_updated <- dat_updated
 dat_posterior_updated$prior_only <- 0
 
-
+# sample 
 posterior_fit_updated <- mod$sample(
   data = dat_posterior_updated,
   parallel_chains = parallel::detectCores(),
@@ -346,15 +353,3 @@ posterior_draws_updated %>%
       y = "Density"
     )
 
-
-draws_array <- as_draws_array(fit$draws(variables = "kappa[7]"))
-
-mcmc_dens(draws_array, pars = "kappa[7]")
-mcmc_areas(draws_array, pars = "kappa[7]")
-
-variables(fit$draws())
-
-color_scheme_set("red")
-mcmc_intervals(draws_array, pars = c("mailers", "podcast", "influencers", "sigma"))
-
-draws_array
