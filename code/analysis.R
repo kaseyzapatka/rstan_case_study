@@ -26,7 +26,7 @@ options(
 # Loading required packages and setting defaults
 librarian::shelf(
   cmdstanr, tidyverse, tidybayes, posterior, bayesplot, timathomas/colorout,
-  ggdark, patchwork, here
+  ggdark, patchwork, here, qs
 )
 
 #
@@ -72,6 +72,7 @@ load_in_channel_data <- function(data_path){
 
 # Call your function below
 channels <- load_in_channel_data(data_path)
+  
   glimpse(channels)
 
 # ==========================================================================
@@ -111,13 +112,16 @@ p2 <-
   )
 
 # Combine using patchwork
-p1 / p2 + plot_layout(heights = c(1, 1.2))
+plot_observed <- p1 / p2 + plot_layout(heights = c(1, 1.2))
+plot_observed
+
+  # save for submission
+  ggsave(here("output/figures/combined_plot.png"), plot_observed)
 
 
 # ==========================================================================
 # DATA + PRIORS
 # ==========================================================================
-
 dat = list(
  # Data --------------------------------------------------------------------
    channels = channels[, colnames(channels)!='depvar'],
@@ -172,6 +176,10 @@ fit = mod$sample(data = dat, parallel_chains = parallel::detectCores(), seed = 0
 # STEP 2: SAMPLE FROM THE PREDICTIVE PRIOR
 # ==========================================================================
 
+
+#
+# Sample from the predictive posterior
+# --------------------------------------------------------------------------
 # make sure switch samples from prior only
 dat_prior <- dat
 dat_prior$prior_only <- 1
@@ -189,8 +197,12 @@ prior_draws <-
   spread_draws(predicted[t])  %>%  # spread by t (time index)
   glimpse()
 
-# All prior predictive values collapsed
-prior_draws %>% 
+
+#
+# Visualize prior distribution
+# --------------------------------------------------------------------------
+plot_priors <-
+  prior_draws %>% 
   ggplot(aes(x = predicted)) +
     geom_density(fill = "steelblue", alpha = 0.5) +
     labs(title = "Prior Predictive Distribution", x = "Simulated depvar", y = "Density") +
@@ -201,17 +213,35 @@ prior_draws %>%
       x = "Daily Revenue \n($ hundreds of thousands of dollars)",
       y = "Density"
     )
+  
+plot_priors
 
+    # save for submission
+    ggsave(here("output/figures/plot_priors.pdf"))
 
-prior_draws %>% 
+#
+# Distributional summaries
+# --------------------------------------------------------------------------
+
+# What is the distribution of predictions?
+predicted_summary <- 
+  prior_draws %>% 
   ungroup() %>% 
   select(predicted) %>% 
   summary()
-  
-channels %>% 
+
+# What is the distribution of observed?
+observed_summary <- 
+  channels %>% 
   as_tibble() %>% 
   select(depvar) %>% 
   summary()
+
+  # save for submission
+  qsave(predicted_summary, here("output/tables/predicted_summary.qs"))
+  qsave(observed_summary, here("output/tables/observed_summary.qs"))
+
+
 
 # ==========================================================================
 # STEP 3: SAMPLE FROM THE POSTERIOR
@@ -237,8 +267,11 @@ posterior_draws <-
   spread_draws(predicted[t])  %>%  # spread by t (time index)
   glimpse()
 
-# All posterior predictive values collapsed
-posterior_draws %>% 
+#
+# Visualize posterior distribution
+# --------------------------------------------------------------------------
+plot_posterior <-
+  posterior_draws %>% 
   ggplot(aes(x = predicted)) +
     geom_density(fill = "steelblue", alpha = 0.5) +
     labs(title = "Posterior Predictive Distribution", x = "Simulated depvar", y = "Density") +
@@ -250,12 +283,54 @@ posterior_draws %>%
       y = "Density"
     )
 
+plot_posterior
+
+    # save for submission
+    ggsave(("output/figures/plot_posterior.pdf"))
+
+
+#
+# Overlay prior and posterior
+# --------------------------------------------------------------------------
+
+# Combine the data with a new column to label prior/posterior
+combined_draws <- bind_rows(
+  prior_draws  %>% mutate(type = "Prior"),
+  posterior_draws %>% mutate(type = "Posterior")
+)
+
+# Plot both distributions on the same graph
+plot_prior_on_posterior <- 
+combined_draws  %>% 
+ggplot(aes(x = predicted, fill = type)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Prior" = "steelblue", "Posterior" = "firebrick")) +
+  labs(
+    title = "Prior vs. Posterior Predictive Distributions of Daily Revenue",
+    x = "Daily Revenue \n($ thousands of dollars)",
+    y = "Density",
+    fill = NULL
+  ) +
+  scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
+  plot_theme
+
+plot_prior_on_posterior
+
+    # save for submission
+    ggsave(("output/figures/plot_prior_on_posterior.pdf"))
+
 #
 # Diagnose
 # --------------------------------------------------------------------------
 fit_posterior = mod$sample(data = dat_posterior, parallel_chains = parallel::detectCores(), seed = 0)
 
 fit_posterior$cmdstan_diagnose()
+
+  # save for submission 
+  writeLines(
+    capture.output(fit_posterior$cmdstan_diagnose()),
+    here::here("output/tables", "posterior_diagnostics.txt")
+  )
 
 
 # ==========================================================================
@@ -266,43 +341,83 @@ fit_posterior$cmdstan_diagnose()
 # Update Priors
 # --------------------------------------------------------------------------
 dat_updated = list(
-# Data --------------------------------------------------------------------
-  channels = channels[, colnames(channels)!='depvar'],
-  
-  n_channels = dim(channels)[2]-1,
+  channels = channels[, colnames(channels) != 'depvar'],
+  n_channels = dim(channels)[2] - 1,
   n_timesteps = dim(channels)[1],
   depvar = channels$depvar,
-  
-# Priors ------------------------------------------------------------------
-  intercept_lb = 4,
-  intercept_ub = 10,
-  intercept_eta_mean = 7,
-  intercept_eta_scale = 2,
+
+  intercept_lb = 2,
+  intercept_ub = 6,
+  intercept_eta_mean = 0,
+  intercept_eta_scale = 1,
+
   beta_lb = 0,
-  beta_ub = 5,
-  beta_eta_mean = 1,
-  beta_eta_scale = 0.5,
-  
-  kappa_lb = 3,
-  kappa_ub = 10,
-  kappa_eta_mean = 6.5,
+  beta_ub = 4,
+  beta_eta_mean = -2,
+  beta_eta_scale = 1,
+
+  kappa_lb = 1,
+  kappa_ub = 6,
+  kappa_eta_mean = -1,
   kappa_eta_scale = 1.5,
-  
+
   conc_lb = 0.3,
-  conc_ub = 1.5,
+  conc_ub = 2.5,
   conc_eta_mean = 0,
-  conc_eta_scale = 1,
-  
+  conc_eta_scale = 1.2,
+
   shift_lb = 0,
   shift_ub = 10,
   shift_eta_mean = 0,
-  shift_eta_scale = 0.5,
+  shift_eta_scale = 1.5,
 
-# Sample From Prior Predictive? -------------------------------------------
-  ## 1 - Yes
-  ## 0 - No (sample from posterior)
-  prior_only = 0
+  prior_only = 1
 )
+
+
+
+#
+# Sample from the predictive posterior
+# --------------------------------------------------------------------------
+# make sure switch samples from prior only
+dat_prior_updated <- dat_updated
+dat_prior_updated$prior_only <- 1
+
+# sample from the predictive prior
+prior_fit_updated <- mod$sample(
+  data = dat_prior_updated,
+  parallel_chains = parallel::detectCores(),
+  seed = 0
+)
+
+# Use tidybayes to extract and tidy the array
+prior_draws_updated <- 
+  prior_fit_updated  %>% 
+  spread_draws(predicted[t])  %>%  # spread by t (time index)
+  glimpse()
+
+
+#
+# Visualize prior distribution
+# --------------------------------------------------------------------------
+plot_priors_updated <-
+  prior_draws_updated %>% 
+  ggplot(aes(x = predicted)) +
+    geom_density(fill = "steelblue", alpha = 0.5) +
+    labs(title = "Prior Predictive Distribution", x = "Simulated depvar", y = "Density") +
+    plot_theme +
+    scale_x_continuous(labels = scales::label_dollar(scale = 1, accuracy = 0.1, suffix = "k")) +
+    labs(
+      title = "Prior Predictive Distribution of Daily Revenue",
+      x = "Daily Revenue \n($ hundreds of thousands of dollars)",
+      y = "Density"
+    )
+  
+plot_priors_updated
+
+    # save for submission
+    ggsave(here("output/figures/plot_priors_udpated.pdf"))
+
 
 
 #
@@ -316,8 +431,15 @@ fit_updated = mod$sample(data = dat_updated, parallel_chains = parallel::detectC
 fit_updated$cmdstan_diagnose()
 
 
+  # save for submission 
+  writeLines(
+    capture.output(fit_updated$cmdstan_diagnose()),
+    here::here("output/tables", "posterior_updated_diagnostics.txt")
+  )
+
+
 #
-# Sample from the updated  posterior
+# Sample from the updated posterior
 # --------------------------------------------------------------------------
 
 # switch to sample from posterior
@@ -337,8 +459,11 @@ posterior_draws_updated <-
   spread_draws(predicted[t])  %>%  # spread by t (time index)
   glimpse()
 
-# All posterior predictive values collapsed
-posterior_draws_updated %>% 
+#
+# Visualize updated posterior distribution
+# --------------------------------------------------------------------------
+plot_posterior_updated <-
+  posterior_draws_updated %>% 
   ggplot(aes(x = predicted)) +
     geom_density(fill = "steelblue", alpha = 0.3) +
     labs(title = "Posterior Predictive Distribution", x = "Simulated depvar", y = "Density") +
@@ -352,4 +477,45 @@ posterior_draws_updated %>%
       x = "Daily Revenue \n($ thousands of dollars)",
       y = "Density"
     )
+
+  plot_posterior_updated
+
+    # save for submission
+    ggsave(("output/figures/plot_posterior_updated.pdf"), plot_posterior_updated)
+
+
+#
+# Overlay prior and posterior
+# --------------------------------------------------------------------------
+
+# Combine the data with a new column to label prior/posterior
+combined_draws <- bind_rows(
+  prior_draws_updated  %>% mutate(type = "Prior"),
+  posterior_draws_updated %>% mutate(type = "Posterior")
+)
+
+# Plot both distributions on the same graph
+plot_prior_on_posterior <- 
+combined_draws  %>% 
+ggplot(aes(x = predicted, fill = type)) +
+  geom_density(alpha = 0.5) +
+  geom_vline(xintercept = 4.9, color = "red", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = 7.45, color = "red", linetype = "dashed", linewidth = 1) +
+  scale_fill_manual(values = c("Prior" = "steelblue", "Posterior" = "firebrick")) +
+  labs(
+    title = "Prior vs. Posterior Predictive Distributions of Daily Revenue",
+    x = "Daily Revenue \n($ thousands of dollars)",
+    y = "Density",
+    fill = NULL
+  ) +
+  scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
+  plot_theme
+
+plot_prior_on_posterior
+
+    # save for submission
+    ggsave(("output/figures/plot_prior_on_posterior_updated.pdf"))
+
+prior_draws_updated %>% 
+  summary()
 
