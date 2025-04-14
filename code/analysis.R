@@ -353,13 +353,13 @@ dat_updated = list(
 
   beta_lb = 0,
   beta_ub = 4,
-  beta_eta_mean = -2,
-  beta_eta_scale = 1,
+  beta_eta_mean = 0,
+  beta_eta_scale = 2,  # allow both weak and strong steepness
 
   kappa_lb = 1,
   kappa_ub = 6,
-  kappa_eta_mean = -1,
-  kappa_eta_scale = 1.5,
+  kappa_eta_mean = 0,
+  kappa_eta_scale = 2,  # allow flexibility for tall + short hills
 
   conc_lb = 0.3,
   conc_ub = 2.5,
@@ -369,7 +369,7 @@ dat_updated = list(
   shift_lb = 0,
   shift_ub = 10,
   shift_eta_mean = 0,
-  shift_eta_scale = 1.5,
+  shift_eta_scale = 4.5,  # very wide to cover both 4.9 and 7.45
 
   prior_only = 1
 )
