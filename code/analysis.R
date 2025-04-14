@@ -14,11 +14,11 @@ remove(list = ls())
 
 
 # set terminal width options and increase Java memory in R 
-options(
-  java.parameters = paste0("-Xmx200g"), # Increase Java memory
-  scipen = 999, # avoid scientific notation
-  width=Sys.getenv("COLUMNS") # set width to terminal window
-)
+#options(
+#  java.parameters = paste0("-Xmx200g"), # Increase Java memory
+#  scipen = 999, # avoid scientific notation
+#  width=Sys.getenv("COLUMNS") # set width to terminal window
+#)
 
 #
 # Load libraries
@@ -56,7 +56,7 @@ plot_theme <-
 
 
 # ==========================================================================
-# LOAD DATA
+# STEP 1: LOAD DATA
 # ==========================================================================
 
 # data path
@@ -116,7 +116,7 @@ plot_observed <- p1 / p2 + plot_layout(heights = c(1, 1.2))
 plot_observed
 
   # save for submission
-  ggsave(here("output/figures/combined_plot.png"), plot_observed)
+  ggsave(here("output/figures/observed_combinded.png"), plot_observed)
 
 
 # ==========================================================================
@@ -217,7 +217,7 @@ plot_priors <-
 plot_priors
 
     # save for submission
-    ggsave(here("output/figures/plot_priors.pdf"))
+    ggsave(here("output/figures/plot_priors.png"), plot_priors)
 
 #
 # Distributional summaries
@@ -286,7 +286,7 @@ plot_posterior <-
 plot_posterior
 
     # save for submission
-    ggsave(("output/figures/plot_posterior.pdf"))
+    ggsave(("output/figures/plot_posterior.png"), plot_posterior)
 
 
 #
@@ -317,7 +317,7 @@ ggplot(aes(x = predicted, fill = type)) +
 plot_prior_on_posterior
 
     # save for submission
-    ggsave(("output/figures/plot_prior_on_posterior.pdf"))
+    ggsave(("output/figures/plot_prior_on_posterior.png"), plot_prior_on_posterior)
 
 #
 # Diagnose
@@ -416,7 +416,7 @@ plot_priors_updated <-
 plot_priors_updated
 
     # save for submission
-    ggsave(here("output/figures/plot_priors_udpated.pdf"))
+    ggsave(here("output/figures/plot_priors_updated.png"), plot_priors_updated)
 
 
 
@@ -481,7 +481,7 @@ plot_posterior_updated <-
   plot_posterior_updated
 
     # save for submission
-    ggsave(("output/figures/plot_posterior_updated.pdf"), plot_posterior_updated)
+    ggsave(("output/figures/plot_posterior_updated.png"), plot_posterior_updated)
 
 
 #
@@ -499,8 +499,8 @@ plot_prior_on_posterior <-
 combined_draws  %>% 
 ggplot(aes(x = predicted, fill = type)) +
   geom_density(alpha = 0.5) +
-  geom_vline(xintercept = 4.9, color = "red", linetype = "dashed", linewidth = 1) +
-  geom_vline(xintercept = 7.45, color = "red", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = 4.9, color = "#A52A2A", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = 7.45, color = "#A52A2A", linetype = "dashed", linewidth = 1) +
   scale_fill_manual(values = c("Prior" = "steelblue", "Posterior" = "firebrick")) +
   labs(
     title = "Prior vs. Posterior Predictive Distributions of Daily Revenue",
@@ -514,8 +514,6 @@ ggplot(aes(x = predicted, fill = type)) +
 plot_prior_on_posterior
 
     # save for submission
-    ggsave(("output/figures/plot_prior_on_posterior_updated.pdf"))
+    ggsave(("output/figures/plot_prior_on_posterior_updated.png"), plot_prior_on_posterior)
 
-prior_draws_updated %>% 
-  summary()
 
