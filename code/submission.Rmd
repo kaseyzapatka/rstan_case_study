@@ -1,0 +1,157 @@
+---
+title: "Analysis Submission"
+author: "Kasey Zapatka"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r chunk-settings, echo = FALSE}
+
+knitr::opts_chunk$set(
+  fig.align = "center",        # center align figures
+  warnings = FALSE,            # prevents warnings from appearing in code chunk
+  message = FALSE,             # prevents messages from appearing in code chunk
+  echo = FALSE,                 # do not echo code in file
+  #results = "hide",            # hide results
+  fig.keep = "all"             # keep all figs
+)
+
+```
+
+```{r options}
+# ==========================================================================
+# PACKAGES & OPTIONS
+# ==========================================================================
+# clear all
+remove(list = ls())
+
+#
+# Load libraries
+# --------------------------------------------------------------------------
+# Loading required packages and setting defaults
+librarian::shelf(
+  cmdstanr, tidyverse, tidybayes, posterior, bayesplot, timathomas/colorout,
+  ggdark, patchwork, here
+)
+
+
+#
+# Use cmdrstan for all R chunks
+# --------------------------------------------------------------------------
+register_knitr_engine(override = TRUE)
+
+```
+
+## Step 1: Load data
+
+
+### Question: 
+Write a function to load channel-spend.rds into the R session, then call that function assigning the output to the variable channels.
+
+```{r data, echo=TRUE}
+
+# ==========================================================================
+# STEP 1: LOAD DATA
+# ==========================================================================
+
+# data path
+data_path <- "/Users/Dora/git/projects/rstan_case_study/data/" 
+
+# STEP 1 -------------------------------------------
+# function to load data
+load_in_channel_data <- function(data_path){
+  data <- read_rds(paste0(data_path, "channel-spend.rds"))
+  return(data)
+}
+
+# Call your function below
+channels <- load_in_channel_data(data_path)
+  
+  glimpse(channels)
+
+  
+```
+
+
+## Step 2: Sample from the predict prior 
+
+### Question: 
+Sample from the prior predictive by setting `prior_only=1` in dat. Extract the draws for the predicted
+variable. Use these draws to visualize the prior predictive distribution anyway you see fit.
+
+In no more than 5 sentences per question, answer the following:
+
+  - Do you think the priors we have set are reasonable? Yes, or No?
+  - What is your justification for your answer above?
+
+### Answer: 
+No, I do not think the set priors were reasonable. If we consider the observed data, we can see a bimodal distribution with a peak around `4.9` and `7.45`, which likely corresponds to a slower uptick in daily revenue at the beginninng of the study period that we see in Panel B of Figure \ref{fig:combined-plot}. Figure \ref{fig:priors} visualizes a bimodal prior predictive distribution with peaks much higher than in the observed data (`~13` and `~23`). Although the prior captures the bimodal shape of the observed data, it is shifted way too far to the right to capture the observed parameteres and the left-hand side peak is way too high.
+
+```{r combined-plot, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "95%"}
+ 
+knitr::include_graphics(here("output/figures/observed_combinded.png"))
+
+```
+
+
+```{r priors, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "95%"}
+ 
+knitr::include_graphics(here("output/figures/plot_priors.png"))
+
+```
+
+
+
+## Step 3: Sample from the posterior prior 
+
+### Question: 
+Regardless of your answer above, sample from the model by setting prior_only=0 in dat.
+In no more than 5 sentences per question, answer the following:
+
+  - What is the output of fit$cmdstan_diagnose()? What does this information tell you about the model
+you just sampled?
+  - If this was a real model for a real client, would you feel comfortable proceeding with this model? Why
+or why not?
+
+
+### Answer: 
+
+Figure \ref{fig:diagnose} showed that the main error was a number of divergent transitions, meaning the sampler (Hamiltonian Monte Carlo) was not able to sufficently explore the posterior, that is, provide estimates from sampling that I could trust. This means my estimates are likely biased and that I should not trust them. I would not feel comfortable proceeding if this was real model for a real client because this diagnostic is telling the posterior was not sufficenlty explored and my estimates are likely biased. Visually, this makes sense since the posterior do not cover the observed data (it's too far shifted to the right). Figure \ref{fig:prioronposterior} overlays the prior predictive on the posterior, illustrating the mismatch.
+```{r diagnose, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "95%"}
+ 
+knitr::include_graphics(here("output/figures/posterior_diagnostics.png"))
+
+```
+
+```{r prioronposterior, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "95%"}
+ 
+knitr::include_graphics(here("output/figures/plot_prior_on_posterior.png"))
+
+```
+
+## Step 4: Update priors
+
+### Question: 
+If you think the model is fine, and you would feel comfortable proceeding with this model, then great! Please
+submit your solution indicating so.
+
+If you think this model is deficient in some manner, try editing the priors in order to improve the model.
+There is no need to edit the Stan model itself. If you have edited the priors, then in no more than 5 sentences
+per question, answer the following:
+
+  - What did you change?
+  - Why did you change the priors you selected?
+  - How do you know the model is better than before?
+
+### Answer: 
+
+List all the changes...and the reasons.. .
+
+I know this is better because the prior includes reasonable estimates (`4.9` and `7.45`). Figure \ref{fig:prioronposteriorupdated} illustrates this. 
+
+
+```{r prioronposteriorupdated, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "95%"}
+ 
+knitr::include_graphics(here("output/figures/plot_prior_on_posterior_updated.png"))
+
+```
