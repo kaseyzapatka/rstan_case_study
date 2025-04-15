@@ -43,7 +43,7 @@ plot_theme <-
     axis.text.x = element_text(size = 14),   # Increase x-axis tick labels
     axis.text.y = element_text(size = 14),    # Increase y-axis tick labels
     plot.title.position = "plot",
-    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
     plot.subtitle = element_text(size = 16, face = "bold.italic", hjust = 0.05),
     plot.caption = element_text(size = 12, hjust = 0),
     plot.caption.position = "plot",
@@ -79,13 +79,26 @@ channels <- load_in_channel_data(data_path)
 # DATA VISUALIZATIONS
 # ==========================================================================
 
+
+# Set bayesplot color scheme
+
+# Extract colors correctly from the named list
+blues <- color_scheme_get(scheme = "blue")
+reds <- color_scheme_get(scheme = "red")
+color_scheme_view(scheme = "blue")
+color_scheme_view(scheme = "red")
+reds
+blues
+
+
+
 # 1. Density plot of observed daily revenue
 p1 <- 
   channels %>% 
   ggplot(aes(x = depvar)) + 
-  geom_density(fill = "steelblue", alpha = 0.5) +
-  geom_vline(xintercept = 4.9, color = "red", linetype = "dashed", linewidth = 1) +
-  geom_vline(xintercept = 7.45, color = "red", linetype = "dashed", linewidth = 1) +
+  geom_density(fill = "#005b96", alpha = 0.8) +
+  geom_vline(xintercept = 4.9, color = "#b3cde0", linetype = "solid", linewidth = 2) +
+  geom_vline(xintercept = 7.45, color = "#b3cde0", linetype = "solid", linewidth = 2) +
   plot_theme +
   scale_x_continuous(labels = scales::label_dollar(scale = 1, accuracy = 0.1, suffix = "k")) +
   labs(
@@ -93,13 +106,19 @@ p1 <-
     x = "Daily Revenue \n($ hundreds of thousands of dollars)",
     y = "Density"
   )
+p1
+
+    # save for submission
+    ggsave(here("output/figures/observed.png"), p1)
+
+
 
 # 2. Time series plot of observed revenue
 p2 <- 
   channels %>% 
   mutate(day = row_number()) %>% 
   ggplot(aes(x = day, y = depvar)) +
-  geom_line(color = "steelblue", linewidth = 1, alpha = 0.7,) +
+  geom_line(color = "#005b96", linewidth = 1, alpha = 0.8,) +
   geom_jitter(width = 5, alpha = 0.3, size = 1) +
   geom_smooth(se = TRUE, method = "loess", color = "black", linewidth = 1) +
   plot_theme +
@@ -110,13 +129,7 @@ p2 <-
     x = "Day",
     y = "Daily Revenue \n($ hundreds of thousands of dollars)",
   )
-
-# Combine using patchwork
-plot_observed <- p1 / p2 + plot_layout(heights = c(1, 1.2))  + plot_annotation(tag_levels = 'A')
-plot_observed
-
-  # save for submission
-  ggsave(here("output/figures/observed_combinded.png"), plot_observed)
+p2
 
 
 # ==========================================================================
@@ -204,10 +217,14 @@ prior_draws <-
 plot_priors <-
   prior_draws %>% 
   ggplot(aes(x = predicted)) +
-    geom_density(fill = "steelblue", alpha = 0.5) +
-    labs(title = "Prior Predictive Distribution", x = "Simulated depvar", y = "Density") +
+    geom_density(fill = "#005b96", alpha = 0.8) +
+    geom_vline(xintercept = 13.2, color = "#b3cde0", linetype = "solid", linewidth = 2) +
+    geom_vline(xintercept = 23.3, color = "#b3cde0", linetype = "solid", linewidth = 2) +
     plot_theme +
-    scale_x_continuous(labels = scales::label_dollar(scale = 1, accuracy = 0.1, suffix = "k")) +
+    scale_x_continuous(
+      labels = scales::label_dollar(scale = 1, accuracy = 0.1, suffix = "k"),
+      breaks = seq(floor(min(prior_draws$predicted)), ceiling(max(prior_draws$predicted)), by = 2)
+    ) +
     labs(
       title = "Prior Predictive Distribution of Daily Revenue",
       x = "Daily Revenue \n($ hundreds of thousands of dollars)",
@@ -286,10 +303,13 @@ posterior_draws <-
 plot_posterior <-
   posterior_draws %>% 
   ggplot(aes(x = predicted)) +
-    geom_density(fill = "steelblue", alpha = 0.5) +
-    labs(title = "Posterior Predictive Distribution", x = "Simulated depvar", y = "Density") +
+    geom_density(fill = "#A25050", alpha = 0.8) +
+    geom_vline(xintercept = 10.4, color = "#C79999", linetype = "solid", linewidth = 2) +
     plot_theme +
-    scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
+    scale_x_continuous(
+      labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k"),
+      breaks = seq(0, ceiling(max(posterior_draws$predicted)), by = 5)
+    ) +
     labs(
       title = "Observed Distribution of Daily Revenue",
       x = "Daily Revenue \n($ thousands of dollars)",
@@ -316,15 +336,18 @@ combined_draws <- bind_rows(
 plot_prior_on_posterior <- 
 combined_draws  %>% 
 ggplot(aes(x = predicted, fill = type)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Prior" = "steelblue", "Posterior" = "firebrick")) +
+  geom_density(alpha = 0.8) +
+  scale_fill_manual(values = c("Prior" = "#005b96", "Posterior" = "#A25050")) +
   labs(
-    title = "Prior vs. Posterior Predictive Distributions of Daily Revenue",
+    title = "Prior vs. Posterior \nPredictive Distributions of Daily Revenue",
     x = "Daily Revenue \n($ thousands of dollars)",
     y = "Density",
     fill = NULL
   ) +
-  scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
+  scale_x_continuous(
+      labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k"),
+      breaks = seq(0, ceiling(max(posterior_draws$predicted)), by = 5)
+    ) +
   plot_theme
 
 plot_prior_on_posterior
@@ -418,10 +441,14 @@ prior_draws_updated <-
 plot_priors_updated <-
   prior_draws_updated %>% 
   ggplot(aes(x = predicted)) +
-    geom_density(fill = "steelblue", alpha = 0.5) +
-    labs(title = "Prior Predictive Distribution", x = "Simulated depvar", y = "Density") +
+    geom_density(fill = "#005b96", alpha = 0.8) +
+    geom_vline(xintercept = 7, color = "#b3cde0", linetype = "solid", linewidth = 2) +
     plot_theme +
-    scale_x_continuous(labels = scales::label_dollar(scale = 1, accuracy = 0.1, suffix = "k")) +
+    #scale_x_continuous(labels = scales::label_dollar(scale = 1, accuracy = 0.1, suffix = "k")) +
+    scale_x_continuous(
+      labels = scales::label_dollar(scale = 1, accuracy = 0.1, suffix = "k"),
+      breaks = seq(floor(min(prior_draws_updated$predicted)), ceiling(max(prior_draws_updated$predicted)), by = 2)
+    ) +
     labs(
       title = "Prior Predictive Distribution of Daily Revenue",
       x = "Daily Revenue \n($ hundreds of thousands of dollars)",
@@ -480,8 +507,8 @@ posterior_draws_updated <-
 plot_posterior_updated <-
   posterior_draws_updated %>% 
   ggplot(aes(x = predicted)) +
-    geom_density(fill = "steelblue", alpha = 0.3) +
-    labs(title = "Posterior Predictive Distribution", x = "Simulated depvar", y = "Density") +
+    geom_density(fill = "#A25050", alpha = 0.8) +
+    geom_vline(xintercept = 7.55, color = "#C79999", linetype = "solid", linewidth = 2) +
     plot_theme +
     scale_x_continuous(
       breaks = seq(0, max(posterior_draws_updated$predicted), by = 2.5),
@@ -513,17 +540,21 @@ combined_draws <- bind_rows(
 plot_prior_on_posterior <- 
 combined_draws  %>% 
 ggplot(aes(x = predicted, fill = type)) +
-  geom_density(alpha = 0.5) +
-  geom_vline(xintercept = 4.9, color = "#A52A2A", linetype = "dashed", linewidth = 1) +
-  geom_vline(xintercept = 7.45, color = "#A52A2A", linetype = "dashed", linewidth = 1) +
-  scale_fill_manual(values = c("Prior" = "steelblue", "Posterior" = "firebrick")) +
+  geom_density(alpha = 0.7) +
+  geom_vline(xintercept = 4.9, color = "#C79999", linetype = "solid", linewidth = 2) +
+  geom_vline(xintercept = 7.55, color = "#C79999", linetype = "solid", linewidth = 2) +
+  scale_fill_manual(values = c("Prior" = "#005b96", "Posterior" = "#A25050")) +
   labs(
     title = "Prior vs. Posterior Predictive Distributions of Daily Revenue",
     x = "Daily Revenue \n($ thousands of dollars)",
     y = "Density",
     fill = NULL
   ) +
-  scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
+  #scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
+      scale_x_continuous(
+      labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k"),
+      breaks = seq(floor(min(combined_draws$predicted)), ceiling(max(combined_draws$predicted)), by = 2)
+    ) +
   plot_theme
 
 plot_prior_on_posterior
