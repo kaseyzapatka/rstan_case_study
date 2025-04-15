@@ -2,7 +2,7 @@
 title: "Analysis Submission"
 author: "Kasey Zapatka"
 date: "`r Sys.Date()`"
-output: pdf_document
+output: html_document
 ---
 
 ```{r chunk-settings, echo = FALSE}
@@ -40,22 +40,24 @@ librarian::shelf(
 # --------------------------------------------------------------------------
 register_knitr_engine(override = TRUE)
 
+
+# data path
+data_path <- "/Users/Dora/git/projects/rstan_case_study/data/" 
+
 ```
 
 ## Step 1: Load data
 
+<br> 
 
-### Question: 
-Write a function to load channel-spend.rds into the R session, then call that function assigning the output to the variable channels.
+See my code below that uses a function to load `channel-spend.rds` into my R session and then calls that function and assigns the output to the `channels` variable.
+
 
 ```{r data, echo=TRUE}
 
 # ==========================================================================
 # STEP 1: LOAD DATA
 # ==========================================================================
-
-# data path
-data_path <- "/Users/Dora/git/projects/rstan_case_study/data/" 
 
 # STEP 1 -------------------------------------------
 # function to load data
@@ -75,55 +77,50 @@ channels <- load_in_channel_data(data_path)
 
 ## Step 2: Sample from the predict prior 
 
-### Question: 
-Sample from the prior predictive by setting `prior_only=1` in dat. Extract the draws for the predicted
-variable. Use these draws to visualize the prior predictive distribution anyway you see fit.
+<br> 
 
-In no more than 5 sentences per question, answer the following:
+> Do you think the priors we have set are reasonable? Yes, or No?
 
-  - Do you think the priors we have set are reasonable? Yes, or No?
-  - What is your justification for your answer above?
+No, I do not think the set priors were reasonable. First, the prior predictive falls in a range that is greater than what we might observe in our data (falls between `10` and `25` instead of `4.5` to `9.0`). So, that's the first red-flag. Second, the priors predict a bimodal distribution, it predicts both peaks be of the same size. I would expect the first peak to be much small (perhaps it's just one peak with a left-skewed distribution?). 
 
-### Answer: 
-No, I do not think the set priors were reasonable. If we consider the observed data, we can see a bimodal distribution with a peak around `4.9` and `7.45`, which likely corresponds to a slower uptick in daily revenue at the beginninng of the study period that we see in Panel B of Figure \ref{fig:combined-plot}. Figure \ref{fig:priors} visualizes a bimodal prior predictive distribution with peaks much higher than in the observed data (`~13` and `~23`). Although the prior captures the bimodal shape of the observed data, it is shifted way too far to the right to capture the observed parameteres and the left-hand side peak is way too high.
+<br> 
 
-```{r combined-plot, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "95%"}
+> What is your justification for your answer above?
+
+<br> 
+
+Panel A in Figure \ref{fig:step2} visualizes the observed distribution and illustrates a bimodal distribution with a peak around `4.9` and `7.45`. The prior predictive in Panel B in Figure \ref{fig:step2} stands in contrast: a large bimodal distribution with peaks much higher than in the observed data (`~13` and `~23`), that is, shifted to the right `~7`. Although the prior captures the bimodal shape of the observed data, it is shifted way too far to the right to capture the observed parameters and the left-hand side peak is too large. Panel C of Figure \ref{fig:step2} plots each data point over time (daily revenue) and suggests the bimodal peak stems from slower uptick in daily revenue at the beginninng of the study period (perhaps we could modle this seasonality with more data points?).
+
+```{r step2, results = "markup", fig.cap = "", out.width = "75%"}
  
-knitr::include_graphics(here("output/figures/observed_combinded.png"))
+knitr::include_graphics(here("output/figures/step2.png"))
 
 ```
-
-
-```{r priors, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "95%"}
- 
-knitr::include_graphics(here("output/figures/plot_priors.png"))
-
-```
-
 
 
 ## Step 3: Sample from the posterior prior 
 
-### Question: 
-Regardless of your answer above, sample from the model by setting prior_only=0 in dat.
-In no more than 5 sentences per question, answer the following:
+<br> 
 
-  - What is the output of fit$cmdstan_diagnose()? What does this information tell you about the model
-you just sampled?
-  - If this was a real model for a real client, would you feel comfortable proceeding with this model? Why
-or why not?
+> What is the output of fit$cmdstan_diagnose()? What does this information tell you about the model you just sampled? 
+
+Figure \ref{fig:diagnose} shows that the main error was a number of divergent transitions, meaning the sampler (Hamiltonian Monte Carlo) was not able to sufficently explore the posterior. This measn the the estimates it provides are likely biased and I should not trust them. 
 
 
-### Answer: 
-
-Figure \ref{fig:diagnose} showed that the main error was a number of divergent transitions, meaning the sampler (Hamiltonian Monte Carlo) was not able to sufficently explore the posterior, that is, provide estimates from sampling that I could trust. This means my estimates are likely biased and that I should not trust them. I would not feel comfortable proceeding if this was real model for a real client because this diagnostic is telling the posterior was not sufficenlty explored and my estimates are likely biased. Visually, this makes sense since the posterior do not cover the observed data (it's too far shifted to the right). Figure \ref{fig:prioronposterior} overlays the prior predictive on the posterior, illustrating the mismatch.
-```{r diagnose, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "95%"}
+```{r diagnose, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/posterior_diagnostics.png"))
 
 ```
 
-```{r prioronposterior, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "95%"}
+<br> 
+
+
+> If this was a real model for a real client, would you feel comfortable proceeding with this model? Why or why not?
+
+No, I would not feel comfortable proceeding with this model if it was for a real client because this diagnostic is telling the posterior was not sufficenlty explored and my estimates are likely biased. Visually, this makes sense since the posterior does not cover the range of the observed data (it's too far shifted to the right). Figure \ref{fig:prioronposterior} overlays the prior predictive on the posterior, illustrating the mismatch--a large part of the posterior (red) is not covered by the prior (blue).
+
+```{r prioronposterior, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/plot_prior_on_posterior.png"))
 
@@ -131,26 +128,115 @@ knitr::include_graphics(here("output/figures/plot_prior_on_posterior.png"))
 
 ## Step 4: Update priors
 
-### Question: 
-If you think the model is fine, and you would feel comfortable proceeding with this model, then great! Please
-submit your solution indicating so.
+<br> 
 
-If you think this model is deficient in some manner, try editing the priors in order to improve the model.
-There is no need to edit the Stan model itself. If you have edited the priors, then in no more than 5 sentences
-per question, answer the following:
+> If you think this model is deficient in some manner, try editing the priors in order to improve the model. What did you change?
 
-  - What did you change?
-  - Why did you change the priors you selected?
-  - How do you know the model is better than before?
+Here is a table of changes I made:
 
-### Answer: 
+<br> 
+```{r}
 
-List all the changes...and the reasons.. .
+# libraries 
+library(gt)
+library(dplyr)
+
+# Create data with a group column
+priors_tbl <- data.frame(
+  Group = rep(c("Intercept", "Beta", "Kappa", "Concentration", "Shift"), each = 4),
+  Parameter = c(
+    "intercept_lb", "intercept_ub", "intercept_eta_mean", "intercept_eta_scale",
+    "beta_lb", "beta_ub", "beta_eta_mean", "beta_eta_scale",
+    "kappa_lb", "kappa_ub", "kappa_eta_mean", "kappa_eta_scale",
+    "conc_lb", "conc_ub", "conc_eta_mean", "conc_eta_scale",
+    "shift_lb", "shift_ub", "shift_eta_mean", "shift_eta_scale"
+  ),
+  Original = c(
+    10, 20, 0, 100,
+    0, 5, -1, 1,
+    3, 10, -1, 1,
+    0.3, 1.5, 0, 1,
+    0, 10, 0, 1
+  ),
+  Updated = c(
+    2, 6, 0, 1,
+    0, 4, 0, 2,
+    1, 6, 0, 2,
+    0.3, 2.5, 0, 1.2,
+    0, 10, 0, 4.5
+  ),
+  Changed = c(
+    "Yes", "Yes", "No", "Yes",
+    "No", "Yes", "Yes", "Yes",
+    "Yes", "Yes", "Yes", "Yes",
+    "No", "Yes", "No", "Yes",
+    "No", "No", "No", "Yes"
+  ),
+  Rationale = c(
+    "Narrowed range to match expected scale of outcome",
+    "See above",
+    "",
+    "Strongly reduced scale to give tighter prior",
+    "",
+    "Slightly narrowed range for realism",
+    "Centered prior around 0 instead of negative slope",
+    "Allowed for both weak and strong slopes",
+    "Allowed for both tall and flat curves",
+    "Tightened upper bound for realism",
+    "Made prior symmetric",
+    "Allowed more variation in curvature",
+    "",
+    "Allowed for sharper peaks",
+    "",
+    "Allowed slightly more variation",
+    "",
+    "",
+    "",
+    "Very wide to cover both 4.9 and 7.45 modes"
+  )
+)
+
+# Create gt table
+priors_tbl %>%
+  gt(groupname_col = "Group") %>%
+  tab_header(title = "Comparison of Priors: Original vs. Updated") %>%
+  cols_label(
+    Parameter = "Parameter",
+    Original = "Original Priors",
+    Updated = "Updated Priors",
+    Changed = "Changed?",
+    Rationale = "Rationale for Change"
+  ) %>%
+  data_color(
+    columns = c(Changed),
+    colors = scales::col_factor(
+      palette = c("white", "#4682B450"),  # lightened steelblue
+      domain = c("No", "Yes")
+    )
+  ) %>%
+  tab_options(
+    row_group.as_column = TRUE,
+    table.font.size = "small",
+    row_group.font.weight = "bold",
+    table.align = "left",
+    heading.title.font.size = 16
+  )
+
+
+```
+
+
+> Why did you change the priors you selected?
+
+<br> 
+
+
+
+> How do you know the model is better than before?
 
 I know this is better because the prior includes reasonable estimates (`4.9` and `7.45`). Figure \ref{fig:prioronposteriorupdated} illustrates this. 
 
-
-```{r prioronposteriorupdated, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "95%"}
+```{r prioronposteriorupdated, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/plot_prior_on_posterior_updated.png"))
 
