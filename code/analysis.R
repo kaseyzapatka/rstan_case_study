@@ -14,11 +14,11 @@ remove(list = ls())
 
 
 # set terminal width options and increase Java memory in R 
-#options(
-#  java.parameters = paste0("-Xmx200g"), # Increase Java memory
-#  scipen = 999, # avoid scientific notation
-#  width=Sys.getenv("COLUMNS") # set width to terminal window
-#)
+options(
+  java.parameters = paste0("-Xmx200g"), # Increase Java memory
+  scipen = 999, # avoid scientific notation
+  width=Sys.getenv("COLUMNS") # set width to terminal window
+)
 
 #
 # Load libraries
@@ -112,8 +112,12 @@ p2 <-
   )
 
 # Combine using patchwork
-plot_observed <- p1 / p2 + plot_layout(heights = c(1, 1.2))
+plot_observed <- p1 / p2 + plot_layout(heights = c(1, 1.2)  + plot_annotation(tag_levels = 'A'))
 plot_observed
+
+plot_observed <- p1 / p2 +
+  plot_layout(heights = c(1, 1.2)) +
+  plot_annotation(tag_levels = 'A')  # This adds tags like A, B, etc.
 
   # save for submission
   ggsave(here("output/figures/observed_combinded.png"), plot_observed)
