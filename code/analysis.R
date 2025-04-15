@@ -14,11 +14,11 @@ remove(list = ls())
 
 
 # set terminal width options and increase Java memory in R 
-options(
-  java.parameters = paste0("-Xmx200g"), # Increase Java memory
-  scipen = 999, # avoid scientific notation
-  width=Sys.getenv("COLUMNS") # set width to terminal window
-)
+#options(
+#  java.parameters = paste0("-Xmx200g"), # Increase Java memory
+#  scipen = 999, # avoid scientific notation
+#  width=Sys.getenv("COLUMNS") # set width to terminal window
+#)
 
 #
 # Load libraries
@@ -112,12 +112,8 @@ p2 <-
   )
 
 # Combine using patchwork
-plot_observed <- p1 / p2 + plot_layout(heights = c(1, 1.2)  + plot_annotation(tag_levels = 'A'))
+plot_observed <- p1 / p2 + plot_layout(heights = c(1, 1.2))  + plot_annotation(tag_levels = 'A')
 plot_observed
-
-plot_observed <- p1 / p2 +
-  plot_layout(heights = c(1, 1.2)) +
-  plot_annotation(tag_levels = 'A')  # This adds tags like A, B, etc.
 
   # save for submission
   ggsave(here("output/figures/observed_combinded.png"), plot_observed)
@@ -222,6 +218,19 @@ plot_priors
 
     # save for submission
     ggsave(here("output/figures/plot_priors.png"), plot_priors)
+
+
+# Combine using patchwork
+step2 <- p1 / plot_priors / p2 +
+  plot_layout(heights = c(1, 1, 1)) +  # One height per plot
+  plot_annotation(tag_levels = 'A')
+
+step2
+
+
+  # save for submission
+  ggsave(here("output/figures/step2.png"), step2)
+
 
 #
 # Distributional summaries
@@ -350,35 +359,37 @@ dat_updated = list(
   n_timesteps = dim(channels)[1],
   depvar = channels$depvar,
 
+  # Priors ------------------------------------------------------------------
   intercept_lb = 2,
   intercept_ub = 6,
   intercept_eta_mean = 0,
   intercept_eta_scale = 1,
 
   beta_lb = 0,
-  beta_ub = 4,
-  beta_eta_mean = 0,
-  beta_eta_scale = 2,  # allow both weak and strong steepness
+  beta_ub = 5,
+  beta_eta_mean = -1,
+  beta_eta_scale = 1,  # allow both weak and strong steepness
 
-  kappa_lb = 1,
-  kappa_ub = 6,
-  kappa_eta_mean = 0,
-  kappa_eta_scale = 2,  # allow flexibility for tall + short hills
-
+  kappa_lb = 3,
+  kappa_ub = 10,
+  kappa_eta_mean = -1,
+  kappa_eta_scale = 1,
+  
   conc_lb = 0.3,
-  conc_ub = 2.5,
+  conc_ub = 1.5,
   conc_eta_mean = 0,
-  conc_eta_scale = 1.2,
-
+  conc_eta_scale = 1,
+  
   shift_lb = 0,
   shift_ub = 10,
   shift_eta_mean = 0,
-  shift_eta_scale = 4.5,  # very wide to cover both 4.9 and 7.45
+  shift_eta_scale = 1,
 
+  # Sample From Prior Predictive? -------------------------------------------
+  ## 1 - Yes
+  ## 0 - No (sample from posterior)
   prior_only = 1
 )
-
-
 
 #
 # Sample from the predictive posterior
