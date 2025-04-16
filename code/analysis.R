@@ -535,19 +535,19 @@ plot_posterior_updated <-
 # --------------------------------------------------------------------------
 
 # Combine the data with a new column to label prior/posterior
-combined_draws <- bind_rows(
-  prior_draws_updated  %>% mutate(type = "Prior"),
-  posterior_draws_updated %>% mutate(type = "Posterior")
+combined_draws_updated <- bind_rows(
+  prior_draws_updated  %>% mutate(type = "Updated Prior"),
+  posterior_draws_updated %>% mutate(type = "Updated Posterior")
 )
 
 # Plot both distributions on the same graph
-plot_prior_on_posterior <- 
-combined_draws  %>% 
+plot_prior_on_posterior_updated <- 
+combined_draws_updated  %>% 
 ggplot(aes(x = predicted, fill = type)) +
   geom_density(alpha = 0.7) +
   geom_vline(xintercept = 4.9, color = "#7C0000", linetype = "solid", linewidth = 2) +
   geom_vline(xintercept = 7.55, color = "#7C0000", linetype = "solid", linewidth = 2) +
-  scale_fill_manual(values = c("Prior" = "#005b96", "Posterior" = "#A25050")) +
+  scale_fill_manual(values = c("Updated Prior" = "#005b96", "Updated Posterior" = "#A25050")) +
   labs(
     title = "Updated Prior vs. Updated Posterior",
     x = "Daily Revenue \n($ thousands of dollars)",
@@ -561,10 +561,10 @@ ggplot(aes(x = predicted, fill = type)) +
     ) +
   plot_theme
 
-plot_prior_on_posterior
+plot_prior_on_posterior_updated
 
     # save for submission
-    ggsave(("output/figures/plot_prior_on_posterior_updated.png"), plot_prior_on_posterior, width = 6, height = 8, dpi = 300)
+    ggsave(("output/figures/plot_prior_on_posterior_updated.png"), plot_prior_on_posterior_updated, width = 6, height = 8, dpi = 300)
 
 
 
@@ -645,7 +645,7 @@ plot_post_on_postupdated
 
 
 # Combine using patchwork
-step4 <- plot_prior_on_posterior / plot_prior_on_priorupdated / plot_post_on_postupdated +
+step4 <- plot_prior_on_posterior_updated / plot_prior_on_priorupdated / plot_post_on_postupdated +
   plot_layout(heights = c(1, 1, 1)) +  # One height per plot
   plot_annotation(tag_levels = 'A')
 

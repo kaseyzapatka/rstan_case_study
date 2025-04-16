@@ -99,7 +99,7 @@ channels <- load_in_channel_data(data_path)
 
 ### Do you think the priors we have set are reasonable? Yes, or No?
 
-No, I do not think the set priors are reasonable. Summary Table \@ref(tab:summarytable) shows that the prior predictive covers a range (`7` and `28`) that is greater than what we might observe in our data (`4` to `9`). While I don't expect the priors to perfectly capture the observed data, this is a red flag that suggests the prior does not adequately capture the range of possible, observed values. 
+No, I do not think the set priors are reasonable. Summary Table \@ref(tab:summarytable) shows that the prior predictive covers a range (`7` and `28`) that is greater than what we might observe in our data (`4` to `9`). While I don't expect the priors to perfectly capture the observed data, this is a red flag that suggests the priors do not adequately capture the range of possible, observed values. 
 
 ```{r tables}
 
@@ -129,7 +129,7 @@ summary_table %>%
 
 ### What is your justification for your answer above?
 
-Panel A in Figure \@ref(fig:step2) visualizes the observed distribution with two peaks around `4.9` and `7.5`. The prior predictive in Panel B stands in stark contrast: there's a large bimodal distribution with peaks around (`~13` and `~23`), that are shifted about `~7` to the right of the observed data, and with both peaks of similar height. Although the prior captures the bimodal shape of the observed data, it is shifted too far to the right to capture the observed parameters and the left-hand peak is disproportionately large. Panel C, which plots daily revenue over time, suggests the observed bimodality may stem from a slower uptick in revenue at the start of the study period—perhaps due to seasonality.
+Panel A in Figure @ref(fig:step2) visualizes the observed distribution, with two peaks around `4.9` and `7.5`. The prior predictive in Panel B stands in stark contrast: it shows a large bimodal distribution with peaks around `~13` and `~23`, shifted approximately `~7` units to the right of the observed data, and with both peaks of similar height. Although the prior captures the bimodal shape of the observed data, it is shifted too far to the right to reflect the true parameter values, and the left-hand peak is disproportionately large. Panel C, which plots daily revenue over time, suggests the observed bimodality may stem from a slower uptick in revenue at the start of the study period—--perhaps due to seasonality, early-stage operations, or recent market entry.
 
 ```{r step2, results = "markup", fig.cap = "Comparing observed and prior distributions", out.height = "75%", out.width = "75%"}
  
@@ -144,7 +144,7 @@ knitr::include_graphics(here("output/figures/step2.png"))
 
 ### What is the output of fit$cmdstan_diagnose()? What does this information tell you about the model you just sampled?
 
-Figure @ref(fig:diagnose) shows several divergent transitions, indicating that the Hamiltonian Monte Carlo sampler failed to adequately explore the posterior. As a result, the model estimates are likely biased and unreliable. I should revise the priors to help the model better explore the full range of plausible parameter values.
+Figure @ref(fig:diagnose) is the output from `fit$cmdstan_diagnose()`. Most of the diagnostics are fine: the model was efficient in exploring the sample space (Treedepth), there was a good mix of samples (E-BFMI), there was enough sample independence (ESS), and R-hat was close to 1. However, there were several divergent transitions, which indicate that the Hamiltonian Monte Carlo sampler failed to adequately explore the posterior. As a result, the model estimates are likely biased and unreliable. I should revise the priors to help the model better explore the full range of plausible parameter values.
 
 ```{r diagnose, results = "markup", fig.cap = "Diagnostic output", out.height = "75%", out.width = "75%"}
  
@@ -155,7 +155,7 @@ knitr::include_graphics(here("output/figures/posterior_diagnostics.png"))
 
 ### If this was a real model for a real client, would you feel comfortable proceeding with this model? Why or why not?
 
-No, I would not feel comfortable proceeding with this model if it was for a real client because this diagnostic is telling me the range of possible estimates was not fully explored and I have biased estimates. I would prefer to give clients a model that I am confident fully explored the posterior. This confirms what I suspected in Figure \@ref(fig:step2) and Table \@ref(tab:summarytable)---that the priors would not cover the range of reasonable values and the posterior would not match the observed data well. Figure \@ref(fig:prioronposterior) visuallly confirms this by overlaying the prior predictive on the posterior, illustrating that a large part of the posterior (red) is not covered by the prior (blue) and that both the prior and posterior do not align well with the of the paramters of the observed data (`4.9` and `7.5`) from Figure \@ref(fig:step2).
+No, I would not feel comfortable proceeding with this model because this diagnostic is telling me the range of possible estimates was not fully explored and that I have biased and unreliable estimates. I would prefer to give clients a model that I am confident fully explored the posterior. This confirms what I suspected in Figure @ref(fig:step2) and Table @ref(tab:summarytable)---that the priors would not cover the range of reasonable values and the posterior would not match the observed data well. Figure @ref(fig:prioronposterior) visually confirms this by overlaying the prior predictive on the posterior, illustrating that a large part of the posterior (red) is not covered by the prior (blue), and that both the prior and posterior do not align well with the parameters of the observed data (4.9 and 7.5) from Figure @ref(fig:step2).
 
 ```{r prioronposterior, results = "markup", fig.cap = "Prior vs Posterior", out.height = "75%", out.width = "75%"}
  
@@ -201,8 +201,7 @@ intercept_tbl %>%
 
 ### Why did you change the priors you selected?
 
-My main concern was addressing the baseline level of the outcome, which the original intercept prior failed to capture well. I narrowed the intercept bounds from $10$–$20$ to $4$–$10$, but prior predictive checks showed the mean was still too far to the right, so I adjusted them further to $2$–$6$, resulting in a mean closer to the empirical baseline of $7.5$. I also tightened `intercept_eta_scale` to $1$ to concentrate prior mass around the prior mean, and the updated prior and posterior predictive plots aligned well with the observed data (see Figure \@ref(fig:step4)). The priors for `beta`, `kappa`, `conc`, and `shift` were reasonable and didn't need changes after addressing the intercepts. Given the model's sensitivity to temporal structure, I chose not to alter the shift prior at this stage but may revisit it if future checks suggest the need.
-
+My main concern was making sure my priors and posteriors covered plausible values observed in the data. So, I narrowed the intercept bounds from $10$–$20$ to $4$–$10$, but prior predictive checks showed the mean was still too far to the right, so I adjusted them further to $2$–$6$, resulting in a mean closer to the empirical baseline of $7.5$. I also tightened `intercept_eta_scale` to $1$ to concentrate prior mass around the prior mean; updated prior and posterior predictive plots aligned well with the observed data, as shown in Figure @ref(fig:step4). The priors for `beta`, `kappa`, `conc`, and `shift` seemed reasonable and didn't need changes after updating the intercept priors. Given the model's sensitivity to temporal structure, I chose not to alter the shift prior at this stage but may revisit it if future checks suggest the need.
 
 ### How do you know the model is better than before?
 
