@@ -21,7 +21,6 @@ header-includes:
     - \usepackage{setspace}
     - \newcommand{\beginsupplement}{\setcounter{table}{0}  \renewcommand{\thetable}{A\arabic{table}} \setcounter{figure}{0} \renewcommand{\thefigure}{A\arabic{figure}}}
     - \usepackage{lineno}
-    - \setlength\parindent{24pt}
     - \usepackage{fancyhdr}
     - \usepackage{caption}
    
@@ -93,6 +92,8 @@ channels <- load_in_channel_data(data_path)
 ```
 
 
+\newpage
+
 ## Step 2: Sample from the predict prior  {-}
 
 
@@ -113,9 +114,9 @@ knitr::include_graphics(here("output/figures/step2.png"))
 ```
 
 
-## Step 3: Sample from the posterior prior {-}
+\newpage
 
-<br> 
+## Step 3: Sample from the posterior prior {-}
 
 **What is the output of fit$cmdstan_diagnose()? What does this information tell you about the model you just sampled?**
 
@@ -143,13 +144,9 @@ knitr::include_graphics(here("output/figures/plot_prior_on_posterior.png"))
 
 ## Step 4: Update priors {-}
 
-<br> 
-
 **If you think this model is deficient in some manner, try editing the priors in order to improve the model. What did you change?**
 
 I think the model is deficient and edited the priors to improve the model. Here is a table of changes I made:
-
-<br>
 
 ```{r tableofchanges, results = "markup", fig.cap = "", out.height = "50%", out.width = "75%"}
  
@@ -159,21 +156,17 @@ knitr::include_graphics(here("output/tables/table_of_changes.png"))
 
 **Why did you change the priors you selected?**
 
- - My main concern was to address the baseline level of the outcome that was not being correctly captured in the priors. I originally narrowed the range of the intercept (`intercept_lb` and `intercept_ub`) from $10$ and $20$ to $4$ and $10$ to match the range of the observed data and found it was still a bit far to the right. I narrowed the bounds further to $2$ and $6$ and found the prior predictive centered on a mean of about $7.5$, which matched observed data.  I altered `intercept_eta_scale` dramatically to 1 to ensure a tight fit of the intercept around the prior mean and was fairly confident in this prior given the prior and postierior predictive plots. 
+My main concern was to address the baseline level of the outcome, which was not being correctly captured by the original intercept prior. I originally narrowed the intercept bounds from $10$ and $20$ to $4$ and $10$, but prior predictive checks showed the mean was still too far to the right. I further narrowed it to $2$ and $6$ which resulted in a prior predictive mean around $7.5$ — better matching the empirical baseline. I also tightened `intercept_eta_scale` to $1$ to concentrate prior mass around this region. The updated prior and posterior predictive plots showed strong alignment with the observed data.
  
- - The `beta`, `kappa`, and `conc` parameters seemed they didn't need to be altered given the updated posterior plot captured the observed well. I also  didn't want to alter the `shift` at this point, given this was a time series analysis and the model parameters seemed to capture the start of the upward trend after altering some of the other priors. 
- 
- 
- My main concern was to address the baseline level of the outcome, which was not being correctly captured by the original intercept prior. I originally narrowed the intercept bounds from $10$ and $20$ to $4$ and $10$, but prior predictive checks showed the mean was still too far to the right. I further narrowed it to $2$ and $6$ which resulted in a prior predictive mean around $7.5$ — better matching the empirical baseline. I also tightened intercept_eta_scale to $1$ to concentrate prior mass around this region. The updated prior and posterior predictive plots showed strong alignment with the observed data.
- 
-The priors for `beta`, `kappa`, and `conc` and `shift` appeared reasonable and did not require alteration. Posterior predictive checks showed these parameters contributed well to capturing the observed trend and variation. Given the model's sensitivity to temporal structure, I opted not to alter the shift prior at this stage, especially since the updated priors were sufficient to model the onset of the upward trend. I may revisit these priors if subsequent predictive checks or model performance suggest the need.
+The priors for `beta`, `kappa`, and `conc` and `shift` appeared reasonable and did not require alteration after addressing the intercepts. Posterior predictive checks showed these parameters contributed well to capturing the observed trend and variation. Given the model's sensitivity to temporal structure, I opted not to alter the shift prior at this stage, especially since the updated priors were sufficient to model the onset of the upward trend. I may revisit these priors if subsequent predictive checks or model performance suggest the need.
 
-> How do you know the model is better than before?
+**How do you know the model is better than before?**
 
 I know this is better because the prior includes reasonable estimates (`4.9` and `7.45`). Figure \ref{fig:prioronposteriorupdated} illustrates this. 
 
-```{r prioronposteriorupdated, results = "markup", fig.cap = "", out.height = "50%", out.width = "75%"}
+
+```{r step4, results = "markup", fig.cap = "", out.height = "75%", out.width = "75%"}
  
-knitr::include_graphics(here("output/figures/plot_prior_on_posterior_updated.png"))
+knitr::include_graphics(here("output/figures/step4.png"))
 
 ```
