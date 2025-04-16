@@ -1,8 +1,5 @@
 # ==========================================================================
 # Analysis
-
-# Summary: Evaluate model fit based on prior and posterior fits. Update as 
-# needed.
 # ==========================================================================
 
 
@@ -63,7 +60,9 @@ reds <- color_scheme_get(scheme = "red")
 color_scheme_view(scheme = "red")
 reds
 
-
+pinks <- color_scheme_get(scheme = "pink")
+color_scheme_view(scheme = "pink")
+pinks
 
 
 # ==========================================================================
@@ -84,7 +83,7 @@ load_in_channel_data <- function(data_path){
 
 # Call your function below
 channels <- load_in_channel_data(data_path)
-  
+
 
 # ==========================================================================
 # DATA VISUALIZATIONS
@@ -95,9 +94,9 @@ channels <- load_in_channel_data(data_path)
 p1 <- 
   channels %>% 
   ggplot(aes(x = depvar)) + 
-  geom_density(fill = "#005b96", alpha = 0.8) +
-  geom_vline(xintercept = 4.9, color = "#b3cde0", linetype = "solid", linewidth = 2) +
-  geom_vline(xintercept = 7.45, color = "#b3cde0", linetype = "solid", linewidth = 2) +
+  geom_density(fill = "#a25079", alpha = 0.8) +
+  geom_vline(xintercept = 4.9, color = "#c799b0", linetype = "solid", linewidth = 2) +
+  geom_vline(xintercept = 7.45, color = "#c799b0", linetype = "solid", linewidth = 2) +
   plot_theme +
   scale_x_continuous(labels = scales::label_dollar(scale = 1, accuracy = 0.1, suffix = "k")) +
   labs(
@@ -117,7 +116,7 @@ p2 <-
   channels %>% 
   mutate(day = row_number()) %>% 
   ggplot(aes(x = day, y = depvar)) +
-  geom_line(color = "#005b96", linewidth = 1, alpha = 0.8,) +
+  geom_line(color = "#a25079", linewidth = 1, alpha = 0.8,) +
   geom_jitter(width = 5, alpha = 0.3, size = 1) +
   geom_smooth(se = TRUE, method = "loess", color = "black", linewidth = 1) +
   plot_theme +
@@ -338,11 +337,14 @@ plot_prior_on_posterior <-
 combined_draws  %>% 
 ggplot(aes(x = predicted, fill = type)) +
   geom_density(alpha = 0.8) +
+  geom_vline(xintercept = 4.9, color = "#2A3439", linetype = "solid", linewidth = 2) +
+  geom_vline(xintercept = 7.45, color = "#2A3439", linetype = "solid", linewidth = 2) +
   scale_fill_manual(values = c("Prior" = "#005b96", "Posterior" = "#A25050")) +
   labs(
-    title = "Prior vs. Posterior \nPredictive Distributions of Daily Revenue",
+    title = "Prior vs. Posterior",
     x = "Daily Revenue \n($ thousands of dollars)",
     y = "Density",
+    caption = "Notes: Vertical lines at 4.9 and 7.5 represent the two peaks in observed data.",
     fill = NULL
   ) +
   scale_x_continuous(
@@ -354,7 +356,7 @@ ggplot(aes(x = predicted, fill = type)) +
 plot_prior_on_posterior
 
     # save for submission
-    ggsave(("output/figures/plot_prior_on_posterior.png"), plot_prior_on_posterior)
+    ggsave(("output/figures/plot_prior_on_posterior.png"), plot_prior_on_posterior, width = 6, height = 8, dpi = 300)
 
 #
 # Diagnose
@@ -362,6 +364,7 @@ plot_prior_on_posterior
 fit_posterior = mod$sample(data = dat_posterior, parallel_chains = parallel::detectCores(), seed = 0)
 
 fit_posterior$cmdstan_diagnose()
+
 
   # save for submission 
   writeLines(
@@ -459,7 +462,7 @@ plot_priors_updated <-
 plot_priors_updated
 
     # save for submission
-    ggsave(here("output/figures/plot_priors_updated.png"), plot_priors_updated)
+    ggsave(here("output/figures/plot_priors_updated.png"), plot_priors_updated, width = 6, height = 8, dpi = 300)
 
 
 
@@ -524,7 +527,7 @@ plot_posterior_updated <-
   plot_posterior_updated
 
     # save for submission
-    ggsave(("output/figures/plot_posterior_updated.png"), plot_posterior_updated)
+    ggsave(("output/figures/plot_posterior_updated.png"), plot_posterior_updated, width = 6, height = 8, dpi = 300)
 
 
 #
@@ -542,25 +545,114 @@ plot_prior_on_posterior <-
 combined_draws  %>% 
 ggplot(aes(x = predicted, fill = type)) +
   geom_density(alpha = 0.7) +
-  geom_vline(xintercept = 4.9, color = "#C79999", linetype = "solid", linewidth = 2) +
-  geom_vline(xintercept = 7.55, color = "#C79999", linetype = "solid", linewidth = 2) +
+  geom_vline(xintercept = 4.9, color = "#7C0000", linetype = "solid", linewidth = 2) +
+  geom_vline(xintercept = 7.55, color = "#7C0000", linetype = "solid", linewidth = 2) +
   scale_fill_manual(values = c("Prior" = "#005b96", "Posterior" = "#A25050")) +
   labs(
-    title = "Prior vs. Posterior Predictive Distributions of Daily Revenue",
+    title = "Updated Prior vs. Updated Posterior",
     x = "Daily Revenue \n($ thousands of dollars)",
     y = "Density",
+    caption = "Notes: Vertical lines at 4.9 and 7.5 represent the two peaks in observed data.",
     fill = NULL
   ) +
-  #scale_x_continuous(labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k")) +
-      scale_x_continuous(
+  scale_x_continuous(
       labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k"),
-      breaks = seq(floor(min(combined_draws$predicted)), ceiling(max(combined_draws$predicted)), by = 2)
+      breaks = seq(floor(min(combined_draws$predicted)), ceiling(max(combined_draws$predicted)), by = 5)
     ) +
   plot_theme
 
 plot_prior_on_posterior
 
     # save for submission
-    ggsave(("output/figures/plot_prior_on_posterior_updated.png"), plot_prior_on_posterior)
+    ggsave(("output/figures/plot_prior_on_posterior_updated.png"), plot_prior_on_posterior, width = 6, height = 8, dpi = 300)
+
+
+
+#
+# Overlay prior and prior-updated
+# --------------------------------------------------------------------------
+
+# Combine the data with a new column to label prior/posterior
+prior_prior_updated_draws <- bind_rows(
+  prior_draws  %>% mutate(type = "Prior"),
+  prior_draws_updated %>% mutate(type = "Updated Prior")
+)
+
+# Plot both distributions on the same graph
+plot_prior_on_priorupdated <- 
+prior_prior_updated_draws  %>% 
+ggplot(aes(x = predicted, fill = type)) +
+  geom_density(alpha = 0.7) +
+  geom_vline(xintercept = 4.9, color = "#011f4b", linetype = "solid", linewidth = 2) +
+  geom_vline(xintercept = 7.55, color = "#011f4b", linetype = "solid", linewidth = 2) +
+  scale_fill_manual(values = c("Prior" = "#b3cde0", "Updated Prior" = "#005b96")) +
+  labs(
+    title = "Prior vs. Updated Prior",
+    x = "Daily Revenue \n($ thousands of dollars)",
+    y = "Density",
+    caption = "Notes: Vertical lines at 4.9 and 7.5 represent the two peaks in observed data.",
+    fill = NULL
+  ) +
+  scale_x_continuous(
+      labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k"),
+      breaks = seq(floor(min(prior_prior_updated_draws$predicted)), ceiling(max(prior_prior_updated_draws$predicted)), by = 5)
+    ) +
+  plot_theme
+
+plot_prior_on_priorupdated
+
+    # save for submission
+    ggsave(("output/figures/plot_prior_on_prior_updated.png"), plot_prior_on_priorupdated, width = 6, height = 8, dpi = 300)
+
+
+#
+# Overlay posterior and posterior-updated
+# --------------------------------------------------------------------------
+
+# Combine the data with a new column to label prior/posterior
+post_on_post_updated_draws <- bind_rows(
+  posterior_draws  %>% mutate(type = "Posterior"),
+  posterior_draws_updated %>% mutate(type = "Updated Posterior")
+)
+
+# Plot both distributions on the same graph
+plot_post_on_postupdated <- 
+post_on_post_updated_draws  %>% 
+ggplot(aes(x = predicted, fill = type)) +
+  geom_density(alpha = 0.7) +
+  geom_vline(xintercept = 4.9, color = "#7C0000", linetype = "solid", linewidth = 2) +
+  geom_vline(xintercept = 7.55, color = "#7C0000", linetype = "solid", linewidth = 2) +
+  scale_fill_manual(values = c("Posterior" = "#C79999", "Updated Posterior" = "#A25050")) +
+  labs(
+    title = "Posterior vs. Updated Posterior",
+    x = "Daily Revenue \n($ thousands of dollars)",
+    y = "Density",
+     caption = "Notes: Vertical lines at 4.9 and 7.5 represent the two peaks in observed data.",
+    fill = NULL
+  ) +
+      scale_x_continuous(
+      labels = scales::label_dollar(scale = 1e3, accuracy = 1, suffix = "k"),
+      breaks = seq(floor(min(post_on_post_updated_draws$predicted)), ceiling(max(post_on_post_updated_draws$predicted)), by = 5)
+    ) +
+  plot_theme
+
+plot_post_on_postupdated
+
+
+      # save for submission
+    ggsave(("output/figures/plot_post_on_postupdated.png"), plot_post_on_postupdated, width = 6, height = 8, dpi = 300)
+
+
+
+# Combine using patchwork
+step4 <- plot_prior_on_posterior / plot_prior_on_priorupdated / plot_post_on_postupdated +
+  plot_layout(heights = c(1, 1, 1)) +  # One height per plot
+  plot_annotation(tag_levels = 'A')
+
+step4
+
+  # save for submission
+  ggsave(here("output/figures/step4.png"), step4, width = 6, height = 8, dpi = 300)
+
 
 
