@@ -1,7 +1,6 @@
 ---
 title: "Analysis Submission"
 author: "Kasey Zapatka"
-date: " `r format(Sys.time(), '%B %d, %Y')`"
 output:
   bookdown::pdf_document2:
     toc: no
@@ -150,7 +149,7 @@ knitr::include_graphics(here("output/figures/step2.png"))
 
 Figure @ref(fig:diagnose) shows several divergent transitions, indicating that the Hamiltonian Monte Carlo sampler failed to adequately explore the posterior. As a result, the model estimates are likely biased and unreliable. I should revise the priors to help the model better explore the full range of plausible parameter values.
 
-```{r diagnose, results = "markup", fig.cap = "cmdstan_diagnose ouput", out.height = "75%", out.width = "75%"}
+```{r diagnose, results = "markup", fig.cap = "Diagnostic output", out.height = "75%", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/posterior_diagnostics.png"))
 
@@ -159,7 +158,7 @@ knitr::include_graphics(here("output/figures/posterior_diagnostics.png"))
 
 ### If this was a real model for a real client, would you feel comfortable proceeding with this model? Why or why not?
 
-No, I would not feel comfortable proceeding with this model if it was for a real client because this diagnostic is telling me the range of possible estimates was not fully explored and I have biased estimates. I would prefer to give clients a model that I am confident fully explored the posterior. This confirms what I suspected from Figure \@ref(fig:step2) and Table \@ref(tab:summarytable) --that the priors would not cover the range of reasonable values and the posterior would not match well with observed data. Figure \@ref(fig:prioronposterior) visuallly confirms this by overlaying the prior predictive on the posterior, illustrating a large part of the posterior (red) is not covered by the prior (blue).
+No, I would not feel comfortable proceeding with this model if it was for a real client because this diagnostic is telling me the range of possible estimates was not fully explored and I have biased estimates. I would prefer to give clients a model that I am confident fully explored the posterior. This confirms what I suspected from Figure \@ref(fig:step2) and Table \@ref(tab:summarytable)---that the priors would not cover the range of reasonable values and the posterior would not match well with observed data. Figure \@ref(fig:prioronposterior) visuallly confirms this by overlaying the prior predictive on the posterior, illustrating a large part of the posterior (red) is not covered by the prior (blue).
 
 ```{r prioronposterior, results = "markup", fig.cap = " ", out.height = "75%", out.width = "75%"}
  
@@ -173,75 +172,33 @@ knitr::include_graphics(here("output/figures/plot_prior_on_posterior.png"))
 
 ### If you think this model is deficient in some manner, try editing the priors in order to improve the model. What did you change?
 
-I think the model is deficient and edited the priors to improve the model. Here is a table of changes I made:
+I think the model is deficient and edited the priors to improve the model. Table \ref{tab:tablechanges} lists the changes I made:
 
 
-```{r changetable , eval = FALSE}
+```{r tablechanges}
 
-library(gt)
 library(dplyr)
+library(knitr)
+library(kableExtra)
 
-priors_tbl <- tibble::tribble(
-  ~Group, ~Parameter, ~`Original Priors`, ~`Updated Priors`, ~Changed, ~`Rationale for Change`,
-  
-  "Intercept", "intercept_lb", 10, 2, "Yes", "Narrowed lower bound to better reflect observed data",
-  "Intercept", "intercept_ub", 20, 6, "Yes", "Narrowed upper bound to better reflect observed data",
-  "Intercept", "intercept_eta_mean", 0, 0, "No", "",
-  "Intercept", "intercept_eta_scale", 100, 1, "Yes", "Reduced scale for a more concentrated prior",
-  
-  "Beta", "beta_lb", 0, 0, "No", "",
-  "Beta", "beta_ub", 5, 5, "No", "",
-  "Beta", "beta_eta_mean", -1, -1, "No", "",
-  "Beta", "beta_eta_scale", 1, 1, "No", "",
-  
-  "Kappa", "kappa_lb", 3, 3, "No", "",
-  "Kappa", "kappa_ub", 10, 10, "No", "",
-  "Kappa", "kappa_eta_mean", -1, -1, "No", "",
-  "Kappa", "kappa_eta_scale", 1, 1, "No", "",
-  
-  "Conc", "conc_lb", 0.3, 0.3, "No", "",
-  "Conc", "conc_ub", 1.5, 1.5, "No", "",
-  "Conc", "conc_eta_mean", 0, 0, "No", "",
-  "Conc", "conc_eta_scale", 1, 1, "No", "",
-  
-  "Shift", "shift_lb", 0, 0, "No", "",
-  "Shift", "shift_ub", 10, 10, "No", "",
-  "Shift", "shift_eta_mean", 0, 0, "No", "",
-  "Shift", "shift_eta_scale", 1, 1, "No", ""
+# Create simplified intercept prior table
+intercept_tbl <- tibble::tribble(
+  ~Parameter, ~`Original`, ~`Updated`,
+  "intercept_lb", 10, 2,
+  "intercept_ub", 20, 6,
+  "intercept_eta_mean", 0, 0,
+  "intercept_eta_scale", 100, 1
 )
 
-priors_tbl %>%
-  gt(groupname_col = "Group") %>%
-  tab_header(title = "Comparison of Priors: Original vs. Updated") %>%
-  cols_label(
-    Parameter = "Parameter",
-    `Original Priors` = "Original Priors",
-    `Updated Priors` = "Updated Priors",
-    Changed = "Changed?",
-    `Rationale for Change` = "Rationale for Change"
+# Render using kable with caption and LaTeX formatting
+intercept_tbl %>%
+  kbl(
+    caption = "Comparison of original and updated priors for the model intercept.",
+    booktabs = TRUE,
+    format = "latex",
+    label = "tablechanges"
   ) %>%
-  data_color(
-    columns = Changed,
-    colors = scales::col_factor(
-      palette = c("white", "#4682B450"),  # steelblue with ~50% alpha
-      domain = c("No", "Yes")
-    )
-  ) %>%
-  tab_options(
-    row_group.as_column = TRUE,
-    table.font.size = "small",
-    row_group.font.weight = "bold",
-    table.align = "left",
-    heading.title.font.size = 16,
-    column_labels.font.weight = "bold"
-  )
-
- 
-```
-
-```{r tableofchanges, results = "markup", fig.cap = "", out.height = "50%", out.width = "75%"}
- 
-knitr::include_graphics(here("output/tables/table_of_changes.png"))
+  kable_styling(latex_options = c("hold_position"))
 
 ```
 
@@ -254,8 +211,9 @@ My main concern was addressing the baseline level of the outcome, which the orig
 
 I know this model is better than before because (1) the prior includes reasonable estimates (`4.9` and `7.45`), (2) the updated posterior matches well to the observed, and (3) the output of `fit_updated$cmdstan_diagnose()` reports no divergent transitions. Panel B in Figure \@ref(fig:step4) illustrates point 1, Panel C illustrates point 2, and Panel A shows both points 1 and 2 cover the data well. 
 
+\newpage
 
-```{r step4, results = "markup", fig.cap = "  ", out.height = "75%", out.width = "75%"}
+```{r step4, results = "markup", fig.cap = "  ", out.height = "90%", out.width = "90%"}
  
 knitr::include_graphics(here("output/figures/step4.png"))
 
