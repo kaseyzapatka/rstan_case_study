@@ -3,7 +3,7 @@ title: "Analysis Submission"
 author: "Kasey Zapatka"
 date: " `r format(Sys.time(), '%B %d, %Y')`"
 output:
-  bookdown::html_document2:
+  bookdown::pdf_document2:
     toc: no
     fig_caption: yes
     latex_engine: xelatex
@@ -135,7 +135,7 @@ summary_table %>%
 
 Panel A in Figure \@ref(fig:step2) visualizes the observed distribution with two peaks around `4.9` and `7.45`. The prior predictive in Panel B stands in stark contrast: there's a large bimodal distribution with peaks around (`~13` and `~23`), that are shifted to the right `~7` of the observed data, and of similar height. Although the prior captures the bimodal shape of the observed data, it is shifted too far to the right to capture the observed parameters and the left-hand peak is disproportionately large. Panel C, which plots daily revenue over time, suggests the observed bimodality may stem from a slower uptick in revenue at the start of the study period—perhaps due to unmodeled seasonality.
 
-```{r step2, results = "markup", fig.cap = "MISSING", out.height = "75%", out.width = "75%"}
+```{r step2, results = "markup", fig.cap = " ", out.height = "75%", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/step2.png"))
 
@@ -150,7 +150,7 @@ knitr::include_graphics(here("output/figures/step2.png"))
 
 Figure @ref(fig:diagnose) shows several divergent transitions, indicating that the Hamiltonian Monte Carlo sampler failed to adequately explore the posterior. As a result, the model estimates are likely biased and unreliable. I should revise the priors to help the model better explore the full range of plausible parameter values.
 
-```{r diagnose, results = "markup", fig.cap = "", out.height = "75%", out.width = "75%"}
+```{r diagnose, results = "markup", fig.cap = "cmdstan_diagnose ouput", out.height = "75%", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/posterior_diagnostics.png"))
 
@@ -161,7 +161,7 @@ knitr::include_graphics(here("output/figures/posterior_diagnostics.png"))
 
 No, I would not feel comfortable proceeding with this model if it was for a real client because this diagnostic is telling me the range of possible estimates was not fully explored and I have biased estimates. I would prefer to give clients a model that I am confident fully explored the posterior. This confirms what I suspected from Figure \@ref(fig:step2) and Table \@ref(tab:summarytable) --that the priors would not cover the range of reasonable values and the posterior would not match well with observed data. Figure \@ref(fig:prioronposterior) visuallly confirms this by overlaying the prior predictive on the posterior, illustrating a large part of the posterior (red) is not covered by the prior (blue).
 
-```{r prioronposterior, results = "markup", fig.cap = "", out.height = "75%", out.width = "75%"}
+```{r prioronposterior, results = "markup", fig.cap = " ", out.height = "75%", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/plot_prior_on_posterior.png"))
 
@@ -176,7 +176,7 @@ knitr::include_graphics(here("output/figures/plot_prior_on_posterior.png"))
 I think the model is deficient and edited the priors to improve the model. Here is a table of changes I made:
 
 
-```{r changetable , execute = FALSE}
+```{r changetable , eval = FALSE}
 
 library(gt)
 library(dplyr)
@@ -238,6 +238,7 @@ priors_tbl %>%
 
  
 ```
+
 ```{r tableofchanges, results = "markup", fig.cap = "", out.height = "50%", out.width = "75%"}
  
 knitr::include_graphics(here("output/tables/table_of_changes.png"))
@@ -251,10 +252,10 @@ My main concern was addressing the baseline level of the outcome, which the orig
 
 ### How do you know the model is better than before?
 
-I know this model is better than before because (1) the prior includes reasonable estimates (`4.9` and `7.45`), (2) the updated posterior matches well to the observed, and (3)`fit_updated$cmdstan_diagnose()` reports divergent transitions. Panel B in Figure \@ref(fig:step4) illustrates point 1, Panel C illustrates point 2, and Panel A shows both points 1 and 2 cover the data well. 
+I know this model is better than before because (1) the prior includes reasonable estimates (`4.9` and `7.45`), (2) the updated posterior matches well to the observed, and (3) the output of `fit_updated$cmdstan_diagnose()` reports no divergent transitions. Panel B in Figure \@ref(fig:step4) illustrates point 1, Panel C illustrates point 2, and Panel A shows both points 1 and 2 cover the data well. 
 
 
-```{r step4, results = "markup", fig.cap = "Mssing", out.height = "75%", out.width = "75%"}
+```{r step4, results = "markup", fig.cap = "  ", out.height = "75%", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/step4.png"))
 
