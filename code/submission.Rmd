@@ -7,6 +7,7 @@ output:
     toc: no
     fig_caption: yes
     latex_engine: xelatex
+    number_sections: false
     keep_tex: true
 geometry:
 - top=1in
@@ -23,6 +24,8 @@ header-includes:
     - \usepackage{lineno}
     - \usepackage{fancyhdr}
     - \usepackage{caption}
+    - \usepackage{float}
+    - \usepackage[section]{placeins}
    
 ---
 
@@ -69,8 +72,6 @@ data_path <- "/Users/Dora/git/projects/rstan_case_study/data/"
 
 ## Step 1: Load data {-}
 
-<br> 
-
 My code below uses a function to load `channel-spend.rds` into my R session and then calls that function and assigns the output to the `channels` variable.
 
 ```{r data, echo=TRUE}
@@ -97,17 +98,15 @@ channels <- load_in_channel_data(data_path)
 ## Step 2: Sample from the predict prior  {-}
 
 
-**Do you think the priors we have set are reasonable? Yes, or No?**
+### Do you think the priors we have set are reasonable? Yes, or No?
 
 No, I do not think the set priors were reasonable. First, the prior predictive falls in a range that is greater than what we might observe in our data (falls between `10` and `25` instead of `4.5` to `9.0`). While I don't expect the priors to perfectly capture the observed data, it's a red flag to me that that the prior predictive falls so far above the observed data and that the summary statistics don't match (e.g. mean, median, standard deviation). Second, the priors predict a bimodal distribution with peaks of the same size. I would expect the first peak to be much small (perhaps it's just one peak with a left-skewed distribution?). 
 
-**What is your justification for your answer above?**
+### What is your justification for your answer above?
 
-<br> 
+Figure \@ref(fig:step) visualizes the observed distribution with two peaks around `4.9` and `7.45`. The prior predictive in Panel B stands in stark contrast: there's a large bimodal distribution with peaks much higher than in the observed data (`~13` and `~23`), shifted to the right `~7`, and of the same size. Although the prior captures the bimodal shape of the observed data, it is shifted too far to the right to capture the observed parameters and the left-hand side peak is too large. Exploratory analysis of the observed data in Panel C, which plots daily revenue over time, suggests that the observed bimodality stems from a slower uptick in revenue at the beginning of the study period — perhaps due to seasonality that still needs to be modeled.
 
-Figure \ref{fig:step} visualizes the observed distribution with two peaks around `4.9` and `7.45`. The prior predictive in Panel B stands in stark contrast: there's a large bimodal distribution with peaks much higher than in the observed data (`~13` and `~23`), shifted to the right `~7`, and of the same size. Although the prior captures the bimodal shape of the observed data, it is shifted too far to the right to capture the observed parameters and the left-hand side peak is too large. Exploratory analysis of the observed data in Panel C, which plots daily revenue over time, suggests that the observed bimodality stems from a slower uptick in revenue at the beginning of the study period — perhaps due to seasonality that still needs to be modeled.
-
-```{r step, results = "markup", fig.cap = "", out.height = "50%", out.width = "75%"}
+```{r step, results = "markup", fig.cap = "MISSING", out.height = "50%", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/step2.png"))
 
@@ -129,8 +128,6 @@ knitr::include_graphics(here("output/figures/posterior_diagnostics.png"))
 
 ```
 
-<br> 
-
 
 **If this was a real model for a real client, would you feel comfortable proceeding with this model? Why or why not?**
 
@@ -141,6 +138,8 @@ No, I would not feel comfortable proceeding with this model if it was for a real
 knitr::include_graphics(here("output/figures/plot_prior_on_posterior.png"))
 
 ```
+
+\newpage
 
 ## Step 4: Update priors {-}
 
