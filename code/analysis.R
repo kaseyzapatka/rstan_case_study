@@ -36,12 +36,12 @@ plot_theme <-
   theme_bw() +
   theme(
     legend.position = "bottom",
-    legend.title = element_text(size = 14, face = "bold"),
-    legend.text = element_text(size = 14, face = "bold"),
-    axis.title.x = element_text(size = 14),  # Increase x-axis label size
-    axis.title.y = element_text(size = 14),   # Increase y-axis label size
-    axis.text.x = element_text(size = 14),   # Increase x-axis tick labels
-    axis.text.y = element_text(size = 14),    # Increase y-axis tick labels
+    legend.title = element_text(size = 12, face = "bold"),
+    legend.text = element_text(size = 12, face = "bold"),
+    axis.title.x = element_text(size = 12),  # Increase x-axis label size
+    axis.title.y = element_text(size = 12),   # Increase y-axis label size
+    axis.text.x = element_text(size = 12),   # Increase x-axis tick labels
+    axis.text.y = element_text(size = 12),    # Increase y-axis tick labels
     plot.title.position = "plot",
     plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
     plot.subtitle = element_text(size = 16, face = "bold.italic", hjust = 0.05),
@@ -53,6 +53,17 @@ plot_theme <-
     axis.line.x = element_line(color = "black"),  # Bottom border
     axis.line.y = element_line(color = "black")   # Left border
   )
+
+# Extract colors correctly from bayesplot color schemes
+blues <- color_scheme_get(scheme = "blue")
+color_scheme_view(scheme = "blue")
+blues
+
+reds <- color_scheme_get(scheme = "red")
+color_scheme_view(scheme = "red")
+reds
+
+
 
 
 # ==========================================================================
@@ -67,29 +78,17 @@ data_path
 # function to load data
 load_in_channel_data <- function(data_path){
   data <- read_rds(paste0(data_path, "channel-spend.rds"))
-  return(data)
+  glimpse(data)
+
 }
 
 # Call your function below
 channels <- load_in_channel_data(data_path)
   
-  glimpse(channels)
 
 # ==========================================================================
 # DATA VISUALIZATIONS
 # ==========================================================================
-
-
-# Set bayesplot color scheme
-
-# Extract colors correctly from the named list
-blues <- color_scheme_get(scheme = "blue")
-reds <- color_scheme_get(scheme = "red")
-color_scheme_view(scheme = "blue")
-color_scheme_view(scheme = "red")
-reds
-blues
-
 
 
 # 1. Density plot of observed daily revenue
@@ -109,7 +108,7 @@ p1 <-
 p1
 
     # save for submission
-    ggsave(here("output/figures/observed.png"), p1)
+    ggsave(here("output/figures/plot_observed.png"), plot = p1, width = 6, height = 8, dpi = 300)
 
 
 
@@ -223,7 +222,7 @@ plot_priors <-
     plot_theme +
     scale_x_continuous(
       labels = scales::label_dollar(scale = 1, accuracy = 0.1, suffix = "k"),
-      breaks = seq(floor(min(prior_draws$predicted)), ceiling(max(prior_draws$predicted)), by = 2)
+      breaks = seq(floor(min(prior_draws$predicted)), ceiling(max(prior_draws$predicted)), by = 4)
     ) +
     labs(
       title = "Prior Predictive Distribution of Daily Revenue",
@@ -234,7 +233,9 @@ plot_priors <-
 plot_priors
 
     # save for submission
-    ggsave(here("output/figures/plot_priors.png"), plot_priors)
+    ggsave(here("output/figures/plot_priors.png"), plot_priors, width = 6, height = 8, dpi = 300)
+
+
 
 
 # Combine using patchwork
@@ -246,7 +247,7 @@ step2
 
 
   # save for submission
-  ggsave(here("output/figures/step2.png"), step2)
+  ggsave(here("output/figures/step2.png"), step2, width = 6, height = 8, dpi = 300)
 
 
 #
