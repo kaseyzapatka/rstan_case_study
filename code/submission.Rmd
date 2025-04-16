@@ -55,7 +55,7 @@ remove(list = ls())
 # Loading required packages and setting defaults
 librarian::shelf(
   cmdstanr, tidyverse, tidybayes, posterior, bayesplot, timathomas/colorout,
-  ggdark, patchwork, here
+  ggdark, patchwork, here, qs, knitr, gt
 )
 
 
@@ -67,6 +67,13 @@ register_knitr_engine(override = TRUE)
 
 # data path
 data_path <- "/Users/Dora/git/projects/rstan_case_study/data/" 
+
+# read in diagnose output
+diagnose_output <- qread(here("output/tables/testing.qs"))
+
+# read in observed and predicted summary data
+observed_summary <- qread(here("output/tables/observed_summary.qs"))
+predicted_summary <- qread(here("output/tables/predicted_summary.qs"))
 
 ```
 
@@ -100,13 +107,39 @@ channels <- load_in_channel_data(data_path)
 
 ### Do you think the priors we have set are reasonable? Yes, or No?
 
-No, I do not think the set priors were reasonable. First, the prior predictive falls in a range that is greater than what we might observe in our data (falls between `10` and `25` instead of `4.5` to `9.0`). While I don't expect the priors to perfectly capture the observed data, it's a red flag to me that that the prior predictive falls so far above the observed data and that the summary statistics don't match (e.g. mean, median, standard deviation). Second, the priors predict a bimodal distribution with peaks of the same size. I would expect the first peak to be much small (perhaps it's just one peak with a left-skewed distribution?). 
+No, I do not think the set priors are reasonable. Summary Table \@ref(tab:summarytable) prior predictive covers a range (`7` and `28`) that is greater than what we might observe in our data (`4` to `9`). While I don't expect the priors to perfectly capture the observed data, this is a red flag that suggests the prior does not adequately capture the range of possible, observed values. 
+
+```{r tables}
+
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+summary_table <- tribble(
+  ~Statistic,       ~`Observed`, ~`Predicted`,
+  "Min",            4.210,     7.281,
+  "1st Quartile",   6.890,    13.070,
+  "Median",         7.390,    16.326,
+  "Mean",           7.266,    17.913,
+  "3rd Quartile",   7.892,    23.068,
+  "Max",            9.364,    28.278
+)
+
+summary_table %>%
+  kbl(
+    caption = "Summary statistics comparing observed and predicted values.",
+    booktabs = TRUE,
+    format = "latex",
+    label = "summarytable"
+  ) %>%
+  kable_styling(latex_options = c("hold_position"))
+```
 
 ### What is your justification for your answer above?
 
 Figure \@ref(fig:step) visualizes the observed distribution with two peaks around `4.9` and `7.45`. The prior predictive in Panel B stands in stark contrast: there's a large bimodal distribution with peaks much higher than in the observed data (`~13` and `~23`), shifted to the right `~7`, and of the same size. Although the prior captures the bimodal shape of the observed data, it is shifted too far to the right to capture the observed parameters and the left-hand side peak is too large. Exploratory analysis of the observed data in Panel C, which plots daily revenue over time, suggests that the observed bimodality stems from a slower uptick in revenue at the beginning of the study period — perhaps due to seasonality that still needs to be modeled.
 
-```{r step, results = "markup", fig.cap = "MISSING", out.height = "50%", out.width = "75%"}
+```{r step, results = "markup", fig.cap = "MISSING", out.height = "75%", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/step2.png"))
 
@@ -117,19 +150,18 @@ knitr::include_graphics(here("output/figures/step2.png"))
 
 ## Step 3: Sample from the posterior prior {-}
 
-**What is the output of fit$cmdstan_diagnose()? What does this information tell you about the model you just sampled?**
+### What is the output of fit$cmdstan_diagnose()? What does this information tell you about the model you just sampled?
 
 Figure \ref{fig:diagnose} shows that the main error was a number of divergent transitions, meaning the sampler (Hamiltonian Monte Carlo) was not able to sufficiently explore the posterior. This means that the model estimates are likely biased, that I should not trust them, and that I should adjust the priors to ensure the model can better check out all the possibilities for the parameters we care about. 
 
-
-```{r diagnose, results = "markup", fig.cap = "", out.height = "50%", out.width = "75%"}
+```{r diagnose, results = "markup", fig.cap = "", out.height = "75%", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/posterior_diagnostics.png"))
 
 ```
 
 
-**If this was a real model for a real client, would you feel comfortable proceeding with this model? Why or why not?**
+### If this was a real model for a real client, would you feel comfortable proceeding with this model? Why or why not?
 
 No, I would not feel comfortable proceeding with this model if it was for a real client because this diagnostic is telling me the range of possible estimates was not fully explored and I have biased estimates. I would prefer to give clients a model that I am confident fully explored the posterior. Visually, this makes sense since the posterior does not cover the range of the observed data (it's too far shifted to the right). Figure \ref{fig:prioronposterior} overlays the prior predictive on the posterior, illustrating the mismatch--a large part of the posterior (red) is not covered by the prior (blue).
 
@@ -143,7 +175,7 @@ knitr::include_graphics(here("output/figures/plot_prior_on_posterior.png"))
 
 ## Step 4: Update priors {-}
 
-**If you think this model is deficient in some manner, try editing the priors in order to improve the model. What did you change?**
+### If you think this model is deficient in some manner, try editing the priors in order to improve the model. What did you change?
 
 I think the model is deficient and edited the priors to improve the model. Here is a table of changes I made:
 
@@ -153,18 +185,18 @@ knitr::include_graphics(here("output/tables/table_of_changes.png"))
 
 ```
 
-**Why did you change the priors you selected?**
+### Why did you change the priors you selected?
 
 My main concern was to address the baseline level of the outcome, which was not being correctly captured by the original intercept prior. I originally narrowed the intercept bounds from $10$ and $20$ to $4$ and $10$, but prior predictive checks showed the mean was still too far to the right. I further narrowed it to $2$ and $6$ which resulted in a prior predictive mean around $7.5$ — better matching the empirical baseline. I also tightened `intercept_eta_scale` to $1$ to concentrate prior mass around this region. The updated prior and posterior predictive plots showed strong alignment with the observed data.
  
 The priors for `beta`, `kappa`, and `conc` and `shift` appeared reasonable and did not require alteration after addressing the intercepts. Posterior predictive checks showed these parameters contributed well to capturing the observed trend and variation. Given the model's sensitivity to temporal structure, I opted not to alter the shift prior at this stage, especially since the updated priors were sufficient to model the onset of the upward trend. I may revisit these priors if subsequent predictive checks or model performance suggest the need.
 
-**How do you know the model is better than before?**
+### How do you know the model is better than before?
 
 I know this is better because the prior includes reasonable estimates (`4.9` and `7.45`). Figure \ref{fig:prioronposteriorupdated} illustrates this. 
 
 
-```{r step4, results = "markup", fig.cap = "", out.height = "75%", out.width = "75%"}
+```{r step4, results = "markup", fig.cap = "Mssing", out.height = "75%", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/step4.png"))
 
