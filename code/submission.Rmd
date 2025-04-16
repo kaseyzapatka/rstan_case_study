@@ -1,8 +1,31 @@
 ---
 title: "Analysis Submission"
 author: "Kasey Zapatka"
-date: "`r Sys.Date()`"
-output: html_document
+output:
+  bookdown::pdf_document2:
+    toc: no
+    fig_caption: yes
+    latex_engine: xelatex
+    number_sections: false
+    keep_tex: true
+geometry:
+- top=1in
+- bottom=1in
+- right=1in
+- left=1in
+link-citations: yes
+mainfont: Times New Roman
+fontsize: 12pt
+header-includes:
+    - \usepackage{rotating}
+    - \usepackage{setspace}
+    - \newcommand{\beginsupplement}{\setcounter{table}{0}  \renewcommand{\thetable}{A\arabic{table}} \setcounter{figure}{0} \renewcommand{\thefigure}{A\arabic{figure}}}
+    - \usepackage{lineno}
+    - \usepackage{fancyhdr}
+    - \usepackage{caption}
+    - \usepackage{float}
+    - \usepackage[section]{placeins}
+   
 ---
 
 ```{r chunk-settings, echo = FALSE}
@@ -31,7 +54,7 @@ remove(list = ls())
 # Loading required packages and setting defaults
 librarian::shelf(
   cmdstanr, tidyverse, tidybayes, posterior, bayesplot, timathomas/colorout,
-  ggdark, patchwork, here
+  ggdark, patchwork, here, qs, knitr, gt
 )
 
 
@@ -44,14 +67,14 @@ register_knitr_engine(override = TRUE)
 # data path
 data_path <- "/Users/Dora/git/projects/rstan_case_study/data/" 
 
+# read in diagnose output
+diagnose_output <- qread(here("output/tables/testing.qs"))
+
 ```
 
-## Step 1: Load data
+## Step 1: Load data {-}
 
-<br> 
-
-See my code below that uses a function to load `channel-spend.rds` into my R session and then calls that function and assigns the output to the `channels` variable.
-
+My code below uses a function to load `channel-spend.rds` into my R session and then calls that function and assigns the output to the `channels` variable.
 
 ```{r data, echo=TRUE}
 
@@ -63,181 +86,135 @@ See my code below that uses a function to load `channel-spend.rds` into my R ses
 # function to load data
 load_in_channel_data <- function(data_path){
   data <- read_rds(paste0(data_path, "channel-spend.rds"))
-  return(data)
+  glimpse(data)
 }
 
 # Call your function below
 channels <- load_in_channel_data(data_path)
   
-  glimpse(channels)
-
-  
 ```
 
 
-## Step 2: Sample from the predict prior 
+\newpage
 
-<br> 
+## Step 2: Sample from the predict prior
 
-> Do you think the priors we have set are reasonable? Yes, or No?
 
-No, I do not think the set priors were reasonable. First, the prior predictive falls in a range that is greater than what we might observe in our data (falls between `10` and `25` instead of `4.5` to `9.0`). So, that's the first red-flag. Second, the priors predict a bimodal distribution, it predicts both peaks be of the same size. I would expect the first peak to be much small (perhaps it's just one peak with a left-skewed distribution?). 
+### Do you think the priors we have set are reasonable? Yes, or No?
 
-<br> 
+No, I do not think the set priors are reasonable. Summary Table \@ref(tab:summarytable) shows that the prior predictive covers a range (`7` and `28`) that is greater than what we might observe in our data (`4` to `9`). While I don't expect the priors to perfectly capture the observed data, this is a red flag that suggests the prior does not adequately capture the range of possible, observed values. 
 
-> What is your justification for your answer above?
+```{r tables}
 
-<br> 
+library(dplyr)
+library(knitr)
+library(kableExtra)
 
-Panel A in Figure \ref{fig:step2} visualizes the observed distribution and illustrates a bimodal distribution with a peak around `4.9` and `7.45`. The prior predictive in Panel B in Figure \ref{fig:step2} stands in contrast: a large bimodal distribution with peaks much higher than in the observed data (`~13` and `~23`), that is, shifted to the right `~7`. Although the prior captures the bimodal shape of the observed data, it is shifted way too far to the right to capture the observed parameters and the left-hand side peak is too large. Panel C of Figure \ref{fig:step2} plots each data point over time (daily revenue) and suggests the bimodal peak stems from slower uptick in daily revenue at the beginninng of the study period (perhaps we could modle this seasonality with more data points?).
+summary_table <- tribble(
+  ~Statistic,       ~`Observed`, ~`Predicted`,
+  "Min",            4.210,     7.281,
+  "1st Quartile",   6.890,    13.070,
+  "Median",         7.390,    16.326,
+  "Mean",           7.266,    17.913,
+  "3rd Quartile",   7.892,    23.068,
+  "Max",            9.364,    28.278
+)
 
-```{r step2, results = "markup", fig.cap = "", out.width = "75%"}
+summary_table %>%
+  kbl(
+    caption = "Summary statistics comparing observed and predicted values.",
+    booktabs = TRUE,
+    format = "latex",
+    label = "summarytable"
+  ) %>%
+  kable_styling(latex_options = c("hold_position"))
+```
+
+### What is your justification for your answer above?
+
+Panel A in Figure \@ref(fig:step2) visualizes the observed distribution with two peaks around `4.9` and `7.5`. The prior predictive in Panel B stands in stark contrast: there's a large bimodal distribution with peaks around (`~13` and `~23`), that are shifted to the right `~7` of the observed data, and of similar height. Although the prior captures the bimodal shape of the observed data, it is shifted too far to the right to capture the observed parameters and the left-hand peak is disproportionately large. Panel C, which plots daily revenue over time, suggests the observed bimodality may stem from a slower uptick in revenue at the start of the study period—perhaps due to unmodeled seasonality.
+
+```{r step2, results = "markup", fig.cap = "Comparing observed and prior distributions", out.height = "75%", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/step2.png"))
 
 ```
 
 
-## Step 3: Sample from the posterior prior 
+\newpage
 
-<br> 
+## Step 3: Sample from the posterior prior {-}
 
-> What is the output of fit$cmdstan_diagnose()? What does this information tell you about the model you just sampled? 
+### What is the output of fit$cmdstan_diagnose()? What does this information tell you about the model you just sampled?
 
-Figure \ref{fig:diagnose} shows that the main error was a number of divergent transitions, meaning the sampler (Hamiltonian Monte Carlo) was not able to sufficently explore the posterior. This measn the the estimates it provides are likely biased and I should not trust them. 
+Figure @ref(fig:diagnose) shows several divergent transitions, indicating that the Hamiltonian Monte Carlo sampler failed to adequately explore the posterior. As a result, the model estimates are likely biased and unreliable. I should revise the priors to help the model better explore the full range of plausible parameter values.
 
-
-```{r diagnose, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "75%"}
+```{r diagnose, results = "markup", fig.cap = "Diagnostic output", out.height = "75%", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/posterior_diagnostics.png"))
 
 ```
 
-<br> 
 
+### If this was a real model for a real client, would you feel comfortable proceeding with this model? Why or why not?
 
-> If this was a real model for a real client, would you feel comfortable proceeding with this model? Why or why not?
+No, I would not feel comfortable proceeding with this model if it was for a real client because this diagnostic is telling me the range of possible estimates was not fully explored and I have biased estimates. I would prefer to give clients a model that I am confident fully explored the posterior. This confirms what I suspected from Figure \@ref(fig:step2) and Table \@ref(tab:summarytable)---that the priors would not cover the range of reasonable values and the posterior would not match well with observed data. Figure \@ref(fig:prioronposterior) visuallly confirms this by overlaying the prior predictive on the posterior, illustrating a large part of the posterior (red) is not covered by the prior (blue).
 
-No, I would not feel comfortable proceeding with this model if it was for a real client because this diagnostic is telling the posterior was not sufficenlty explored and my estimates are likely biased. Visually, this makes sense since the posterior does not cover the range of the observed data (it's too far shifted to the right). Figure \ref{fig:prioronposterior} overlays the prior predictive on the posterior, illustrating the mismatch--a large part of the posterior (red) is not covered by the prior (blue).
-
-```{r prioronposterior, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "75%"}
+```{r prioronposterior, results = "markup", fig.cap = "Prior vs Posterior", out.height = "75%", out.width = "75%"}
  
 knitr::include_graphics(here("output/figures/plot_prior_on_posterior.png"))
 
 ```
 
-## Step 4: Update priors
+\newpage
 
-<br> 
+## Step 4: Update priors {-}
 
-> If you think this model is deficient in some manner, try editing the priors in order to improve the model. What did you change?
+### If you think this model is deficient in some manner, try editing the priors in order to improve the model. What did you change?
 
-Here is a table of changes I made:
+I think the model is deficient and edited the priors to improve the model. Table \ref{tab:tablechanges} lists the changes I made:
 
-<br> 
-```{r}
 
-# libraries 
-library(gt)
+```{r tablechanges}
+
 library(dplyr)
+library(knitr)
+library(kableExtra)
 
-# Create data with a group column
-priors_tbl <- data.frame(
-  Group = rep(c("Intercept", "Beta", "Kappa", "Concentration", "Shift"), each = 4),
-  Parameter = c(
-    "intercept_lb", "intercept_ub", "intercept_eta_mean", "intercept_eta_scale",
-    "beta_lb", "beta_ub", "beta_eta_mean", "beta_eta_scale",
-    "kappa_lb", "kappa_ub", "kappa_eta_mean", "kappa_eta_scale",
-    "conc_lb", "conc_ub", "conc_eta_mean", "conc_eta_scale",
-    "shift_lb", "shift_ub", "shift_eta_mean", "shift_eta_scale"
-  ),
-  Original = c(
-    10, 20, 0, 100,
-    0, 5, -1, 1,
-    3, 10, -1, 1,
-    0.3, 1.5, 0, 1,
-    0, 10, 0, 1
-  ),
-  Updated = c(
-    2, 6, 0, 1,
-    0, 4, 0, 2,
-    1, 6, 0, 2,
-    0.3, 2.5, 0, 1.2,
-    0, 10, 0, 4.5
-  ),
-  Changed = c(
-    "Yes", "Yes", "No", "Yes",
-    "No", "Yes", "Yes", "Yes",
-    "Yes", "Yes", "Yes", "Yes",
-    "No", "Yes", "No", "Yes",
-    "No", "No", "No", "Yes"
-  ),
-  Rationale = c(
-    "Narrowed range to match expected scale of outcome",
-    "See above",
-    "",
-    "Strongly reduced scale to give tighter prior",
-    "",
-    "Slightly narrowed range for realism",
-    "Centered prior around 0 instead of negative slope",
-    "Allowed for both weak and strong slopes",
-    "Allowed for both tall and flat curves",
-    "Tightened upper bound for realism",
-    "Made prior symmetric",
-    "Allowed more variation in curvature",
-    "",
-    "Allowed for sharper peaks",
-    "",
-    "Allowed slightly more variation",
-    "",
-    "",
-    "",
-    "Very wide to cover both 4.9 and 7.45 modes"
-  )
+# Create simplified intercept prior table
+intercept_tbl <- tibble::tribble(
+  ~Parameter, ~`Original`, ~`Updated`,
+  "intercept_lb", 10, 2,
+  "intercept_ub", 20, 6,
+  "intercept_eta_mean", 0, 0,
+  "intercept_eta_scale", 100, 1
 )
 
-# Create gt table
-priors_tbl %>%
-  gt(groupname_col = "Group") %>%
-  tab_header(title = "Comparison of Priors: Original vs. Updated") %>%
-  cols_label(
-    Parameter = "Parameter",
-    Original = "Original Priors",
-    Updated = "Updated Priors",
-    Changed = "Changed?",
-    Rationale = "Rationale for Change"
+# Render using kable with caption and LaTeX formatting
+intercept_tbl %>%
+  kbl(
+    caption = "Comparison of original and updated priors for the model intercept.",
+    booktabs = TRUE,
+    format = "latex",
+    label = "tablechanges"
   ) %>%
-  data_color(
-    columns = c(Changed),
-    colors = scales::col_factor(
-      palette = c("white", "#4682B450"),  # lightened steelblue
-      domain = c("No", "Yes")
-    )
-  ) %>%
-  tab_options(
-    row_group.as_column = TRUE,
-    table.font.size = "small",
-    row_group.font.weight = "bold",
-    table.align = "left",
-    heading.title.font.size = 16
-  )
-
+  kable_styling(latex_options = c("hold_position"))
 
 ```
 
+### Why did you change the priors you selected?
 
-> Why did you change the priors you selected?
-
-<br> 
-
+My main concern was addressing the baseline level of the outcome, which the original intercept prior failed to capture correctly. I narrowed the intercept bounds from $10$–$20$ to $4$–$10$, but prior predictive checks showed the mean was still too far to the right, so I adjusted them further to $2$–$6$, resulting in a mean closer to the empirical baseline of $7.5$. I also tightened `intercept_eta_scale` to $1$ to concentrate prior mass around the prior mean, and the updated prior and posterior predictive plots aligned well with the observed data. The priors for `beta`, `kappa`, `conc`, and `shift` were reasonable and didn't need changes after addressing the intercepts. Given the model's sensitivity to temporal structure, I chose not to alter the shift prior at this stage but may revisit it if future checks suggest the need.
 
 
-> How do you know the model is better than before?
+### How do you know the model is better than before?
 
-I know this is better because the prior includes reasonable estimates (`4.9` and `7.45`). Figure \ref{fig:prioronposteriorupdated} illustrates this. 
+I know this model is better than before because (1) the prior includes reasonable estimates (`4.9` and `7.5`), (2) the updated posterior matches well to the observed, and (3) the output of `fit_updated$cmdstan_diagnose()` reports no divergent transitions. Panel B in Figure \@ref(fig:step4) illustrates point 1, Panel C illustrates point 2, and Panel A shows both points 1 and 2 cover the data well. 
 
-```{r prioronposteriorupdated, results = "markup", fig.cap = "Research design to avoid simultaneity bias.", out.width = "75%"}
+\newpage
+
+```{r step4, results = "markup", fig.cap = "Comparing original and updated priors and posteriors", out.height = "90%", out.width = "90%"}
  
-knitr::include_graphics(here("output/figures/plot_prior_on_posterior_updated.png"))
+knitr::include_graphics(here("output/figures/step4.png"))
 
 ```
